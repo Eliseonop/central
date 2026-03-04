@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.tcontur.central.core.storage.AppStorage
 import com.tcontur.central.core.storage.StorageKeys
 import com.tcontur.central.domain.model.User
+import com.tcontur.central.domain.repository.AuthRepository
 import com.tcontur.central.domain.usecase.LogoutUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +28,7 @@ sealed class InspectoriaHomeEvent {
 
 class InspectoriaHomeViewModel(
     private val logoutUseCase: LogoutUseCase,
+    private val authRepository: AuthRepository,
     private val storage: AppStorage
 ) : ViewModel() {
 
@@ -37,7 +39,7 @@ class InspectoriaHomeViewModel(
     val events: StateFlow<InspectoriaHomeEvent?> = _events
 
     init {
-        loadUserFromStorage()
+        loadFromStorage()
     }
 
     fun logout() {
@@ -58,12 +60,19 @@ class InspectoriaHomeViewModel(
 
     fun consumeEvent() { _events.value = null }
 
-    private fun loadUserFromStorage() {
-        val token       = storage.getString(StorageKeys.AUTH_TOKEN)
-        val empresaCod  = storage.getString(StorageKeys.EMPRESA_CODE)
+    private fun loadFromStorage() {
+        // Build the WebView URL from stored credentials
+        val token      = storage.getString(StorageKeys.AUTH_TOKEN)
+        val empresaCod = storage.getString(StorageKeys.EMPRESA_CODE)
         if (token.isNotBlank() && empresaCod.isNotBlank()) {
-            val url = "https://$empresaCod.tcontur.pe/verify-token?token=$token"
-            _state.update { it.copy(webUrl = url) }
+            _state.update {
+                it.copy(webUrl = "https://$empresaCod.tcontur.pe/verify-token?token=$token")
+            }
+        }
+        // Also load User object so the drawer can display the name
+        viewModelScope.launch {
+            val user = authRepository.getStoredUser()
+            if (user != null) _state.update { it.copy(user = user) }
         }
     }
 }

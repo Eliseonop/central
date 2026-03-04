@@ -20,14 +20,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.navigation.NavController
+import androidx.compose.ui.unit.sp
 import com.tcontur.central.presentation.role.inspectoria.components.InspectoriaDrawer
 import com.tcontur.central.presentation.role.inspectoria.webview.WebViewContent
 import com.tcontur.central.ui.components.LoadingOverlay
-import com.tcontur.central.ui.theme.TconturBlue
+import com.tcontur.central.ui.theme.TconturAppBar
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -35,8 +34,6 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun InspectoriaHomeScreen(
     onLogout: () -> Unit,
-    onRequestLocationPermission: (NavController) -> Unit,
-    onRequestLocationService: (NavController) -> Unit,
     viewModel: InspectoriaHomeViewModel = koinViewModel()
 ) {
     val state       by viewModel.state.collectAsState()
@@ -44,7 +41,6 @@ fun InspectoriaHomeScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope       = rememberCoroutineScope()
 
-    // Handle one-shot events from ViewModel
     LaunchedEffect(event) {
         when (event) {
             InspectoriaHomeEvent.LoggedOut -> {
@@ -59,35 +55,42 @@ fun InspectoriaHomeScreen(
         drawerState   = drawerState,
         drawerContent = {
             InspectoriaDrawer(
-                user            = state.user,
-                onNavigateHome  = { scope.launch { drawerState.close() } },
-                onLogout        = viewModel::logout
+                user           = state.user,
+                onNavigateHome = { scope.launch { drawerState.close() } },
+                onLogout       = viewModel::logout
             )
         }
     ) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title  = { Text("Bus Inspector – TCONTUR", color = Color.White) },
+                    title = {
+                        Text("Bus Inspector - TCONTUR", color = Color.White, fontSize = 20.sp)
+                    },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                            Icon(
+                                Icons.Default.Menu,
+                                contentDescription = "Menu",
+                                tint               = Color.White
+                            )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = TconturBlue)
+                    // Flutter AppBar color: #125183
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = TconturAppBar)
                 )
             }
         ) { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(top = innerPadding.calculateTopPadding())
             ) {
                 if (state.webUrl.isNotBlank()) {
                     WebViewContent(
-                        url       = state.webUrl,
-                        modifier  = Modifier.fillMaxSize(),
-                        onError   = { /* Show error UI */ }
+                        url      = state.webUrl,
+                        modifier = Modifier.fillMaxSize(),
+                        onError  = { }
                     )
                 } else {
                     LoadingOverlay()

@@ -30,7 +30,7 @@ val appModule = module {
     // ─── ViewModels ────────────────────────────────────────────────────────
     viewModel { SplashViewModel(get()) }
     viewModel { LoginViewModel(get(), get(), get()) }
-    viewModel { InspectoriaHomeViewModel(get(), get()) }
+    viewModel { InspectoriaHomeViewModel(get(), get(), get()) }
 }
 
 /** All Koin modules shared across platforms. */

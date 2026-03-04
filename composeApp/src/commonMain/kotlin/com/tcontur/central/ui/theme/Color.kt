@@ -2,11 +2,29 @@ package com.tcontur.central.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ─── Brand palette ────────────────────────────────────────────────────────────
-val TconturBlue      = Color(0xFF1565C0)
-val TconturBlueDark  = Color(0xFF003c8f)
-val TconturBlueLight = Color(0xFF5e92f3)
-val TconturAccent    = Color(0xFFFFAB00)
+// ─── Brand palette (exact hex values from Flutter app) ────────────────────────
+/** Main brand blue: #0066a9 — used at full opacity for login gradient bottom, icons */
+val TconturBlue      = Color(0xFF0066A9)
+/** Darker blue: #125183 — used for Home AppBar background */
+val TconturAppBar    = Color(0xFF125183)
+/** Orange accent — used for permission screen buttons */
+val OrangeAccent     = Color(0xFFFFAB40)
+/** Blue accent — used for permission screen headings */
+val BlueAccent       = Color(0xFF448AFF)
+
+// ─── Login gradient stops (same hue #0066a9, varying alpha top→bottom) ────────
+val TconturGrad0     = Color(0x660066A9)   // 40 % opacity
+val TconturGrad1     = Color(0x990066A9)   // 60 % opacity
+val TconturGrad2     = Color(0xCC0066A9)   // 80 % opacity
+val TconturGrad3     = Color(0xFF0066A9)   // 100 % opacity
+
+// ─── Field icon color (#0066a9 at 60 % opacity) ───────────────────────────────
+val TconturIconBlue  = Color(0x990066A9)
+
+// ─── Legacy aliases (used by AppTheme + SplashScreen) ────────────────────────
+val TconturBlueDark  = Color(0xFF003C8F)   // deep navy — splash gradient top, dark scheme
+val TconturBlueLight = Color(0xFF5E92F3)   // light blue — light scheme primaryContainer
+val TconturAccent    = Color(0xFFFFAB00)   // amber — MaterialTheme secondary
 
 // ─── Neutral ──────────────────────────────────────────────────────────────────
 val Surface          = Color(0xFFF5F7FA)

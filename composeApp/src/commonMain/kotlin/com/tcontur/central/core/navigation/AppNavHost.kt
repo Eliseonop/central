@@ -53,6 +53,7 @@ fun AppNavHost(
 
         // Inspectoria role graph
         inspectoriaNavGraph(
+            navController = navController,
             onLogout = {
                 navController.navigate(Login) {
                     popUpTo(0) { inclusive = true }

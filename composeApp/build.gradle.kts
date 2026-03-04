@@ -125,5 +125,6 @@ android {
 }
 
 dependencies {
+    implementation(files("..\\shared\\libs\\protobin-0.1.1.jar"))
     debugImplementation(libs.compose.uiTooling)
 }

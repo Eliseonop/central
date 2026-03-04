@@ -1,0 +1,136 @@
+{
+  "version": "2026-02-23 17:40:00",
+  "formats": {
+    "login": {
+      "header": "L",
+      "client": {
+        "id": {
+          "bytes": 2,
+          "type": "id"
+        },
+        "code": {
+          "type": "string"
+        }
+      },
+      "server": {
+        "id": {
+          "bytes": 2,
+          "type": "id"
+        }
+      }
+    },
+    "position": {
+      "header": "P",
+      "client": {
+        "time": {
+          "type": "datetime"
+        },
+        "latitude": {
+          "bytes": 4,
+          "type": "float",
+          "decimals": 6
+        },
+        "longitude": {
+          "bytes": 4,
+          "type": "float",
+          "decimals": 6
+        }
+      },
+      "server": {
+        "vehicles": {
+          "type": "array",
+          "array": {
+            "id": {
+              "bytes": 2,
+              "type": "id"
+            },
+            "padron": {
+              "bytes": 2,
+              "type": "id"
+            },
+            "license_plate": {
+              "type": "string"
+            },
+            "route": {
+              "type": "string"
+            },
+            "time": {
+              "type": "datetime"
+            },
+            "latitude": {
+              "bytes": 4,
+              "type": "float",
+              "decimals": 6
+            },
+            "longitude": {
+              "bytes": 4,
+              "type": "float",
+              "decimals": 6
+            },
+            "distance": {
+              "bytes": 2,
+              "type": "unsigned"
+            }
+          }
+        }
+      }
+    },
+    "request_qr": {
+      "header": "Q",
+      "client": {
+        "vehicle": {
+          "bytes": 2,
+          "type": "id"
+        }
+      },
+      "server": {
+        "expires_at": {
+          "type": "datetime"
+        }
+      }
+    },
+    "board_bus": {
+      "header": "B",
+      "client": {
+        "time": {
+          "type": "datetime"
+        },
+        "vehicle": {
+          "bytes": 2,
+          "type": "id"
+        }
+      },
+      "server": {
+        "success": {
+          "type": "bool"
+        }
+      }
+    },
+    "alight_from_bus": {
+      "header": "A",
+      "client": {
+        "time": {
+          "type": "datetime"
+        }
+      },
+      "server": {
+        "success": {
+          "type": "bool"
+        }
+      }
+    },
+    "error": {
+      "header": "E",
+      "client": {
+        "error": {
+          "type": "string"
+        }
+      },
+      "server": {
+        "error": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
