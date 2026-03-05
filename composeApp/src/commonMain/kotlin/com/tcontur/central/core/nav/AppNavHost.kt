@@ -1,6 +1,7 @@
 package com.tcontur.central.core.nav
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,10 +12,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.tcontur.central.core.network.SessionEventBus
+import com.tcontur.central.data.AuthRepositoryImpl
 import com.tcontur.central.login.LoginScreen
 import com.tcontur.central.inspectoria.loading.SocketLoadingScreen
 import com.tcontur.central.inspectoria.inspectoriaNavGraph
 import com.tcontur.central.splash.SplashScreen
+import org.koin.compose.koinInject
 
 @Composable
 fun AppNavHost(
@@ -22,6 +26,18 @@ fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     startDestination: Any = Splash
 ) {
+    val authRepository: AuthRepositoryImpl = koinInject()
+
+
+    LaunchedEffect(Unit) {
+        SessionEventBus.unauthorized.collect {
+            authRepository.logout()
+            navController.navigate(Login) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination,

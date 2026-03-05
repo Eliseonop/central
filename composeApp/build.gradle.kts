@@ -57,6 +57,11 @@ kotlin {
             implementation(libs.gms.play.services.location)
             // OkHttp WebSocket (for SocketService)
             implementation(libs.okhttp)
+            // ── CameraX + ML Kit — QR scanning ───────────────────────────────
+            implementation("androidx.camera:camera-camera2:1.4.1")
+            implementation("androidx.camera:camera-lifecycle:1.4.1")
+            implementation("androidx.camera:camera-view:1.4.1")
+            implementation("com.google.mlkit:barcode-scanning:17.3.0")
         }
 
         iosMain.dependencies {

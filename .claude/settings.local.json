@@ -13,7 +13,13 @@
       "Bash(python -u refactor.py)",
       "Bash(BASE=\"C:/Users/edu/Desktop/TCONTUR/android/central/composeApp/src\" CM=\"$BASE/commonMain/kotlin/com/tcontur/central\" echo \"=== AppDestinations.kt \\(package check\\) ===\" head -3 \"$CM/core/nav/AppDestinations.kt\")",
       "Bash(echo \"MISSING!\" echo \"\" echo \"=== AppNavHost.kt \\(top 5 lines\\) ===\" head -10 \"$CM/core/nav/AppNavHost.kt\")",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata)",
+      "Bash(powershell -Command \"New-Item -ItemType Directory -Force -Path ''C:\\\\Users\\\\edu\\\\Desktop\\\\TCONTUR\\\\android\\\\central\\\\composeApp\\\\src\\\\commonMain\\\\kotlin\\\\com\\\\tcontur\\\\central\\\\core\\\\utils'' | Out-Null; New-Item -ItemType Directory -Force -Path ''C:\\\\Users\\\\edu\\\\Desktop\\\\TCONTUR\\\\android\\\\central\\\\composeApp\\\\src\\\\androidMain\\\\kotlin\\\\com\\\\tcontur\\\\central\\\\core\\\\utils'' | Out-Null; New-Item -ItemType Directory -Force -Path ''C:\\\\Users\\\\edu\\\\Desktop\\\\TCONTUR\\\\android\\\\central\\\\composeApp\\\\src\\\\iosMain\\\\kotlin\\\\com\\\\tcontur\\\\central\\\\core\\\\utils'' | Out-Null; Write-Host ''All directories ready.''\")",
+      "Bash(powershell -File \"C:\\\\Users\\\\edu\\\\AppData\\\\Local\\\\Temp\\\\write_dateutils.ps1\")",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid)",
+      "WebFetch(domain:urbanito-23lnu3rcea-uc.a.run.app)",
+      "Bash(\"C:\\\\Users\\\\edu\\\\Desktop\\\\TCONTUR\\\\android\\\\central\\\\composeApp\\\\src\\\\commonMain\\\\kotlin\\\\com\\\\tcontur\\\\central\\\\core\\\\network\\\\HttpClientFactory.kt\":*)"
     ]
   }
 }

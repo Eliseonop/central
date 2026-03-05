@@ -23,11 +23,28 @@ object AdminRoot       // Placeholder – extend when role is ready
 data class SocketLoading(val role: String)
 
 
+// ── Inspectoria destinations ───────────────────────────────────────────────────
+
+/** Dashboard principal de inspectoría (reemplaza el WebView). */
 @Serializable
-object InspectoriaHome
+object InspectoriaDashboard
+
+/** Pantalla para iniciar una nueva inspección. */
+@Serializable
+object IniciarInspeccion
+
+/** Pantalla de edición de una inspección activa. */
+@Serializable
+data class InspeccionActiva(val id: Int)
+
+// ── Shared utility destinations ───────────────────────────────────────────────
 
 @Serializable
 object LocationPermission
 
 @Serializable
 object LocationService
+
+// ── Legacy (no longer navigated to) ──────────────────────────────────────────
+@Serializable
+object InspectoriaHome
