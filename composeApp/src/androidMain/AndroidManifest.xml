@@ -21,6 +21,15 @@
             android:exported="false"
             android:foregroundServiceType="location" />
 
+        <!--
+            WebSocket foreground service – maintains the protobin WS connection in background.
+            foregroundServiceType="dataSync" is required for Android 14+ (API 34+).
+        -->
+        <service
+            android:name="com.tcontur.central.core.services.SocketService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
     </application>
 
 </manifest>

@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class UserResponse(
     @SerialName("id")       val id: Int,
     @SerialName("cargo")    val cargo: String,      // role / job title
+    @SerialName("codigo")   val codigo: Int,         // empresa numeric code (comes as number from API)
     @SerialName("email")    val email: String,
     @SerialName("empresa")  val empresa: String,
     @SerialName("genero")   val genero: Boolean,

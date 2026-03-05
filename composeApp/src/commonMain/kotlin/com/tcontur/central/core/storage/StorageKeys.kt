@@ -8,4 +8,5 @@ object StorageKeys {
     // Token cached independently for the background service
     const val AUTH_TOKEN   = "authToken"
     const val EMPRESA_CODE = "empresaCodigo"
+    const val EMPRESA_ID   = "empresaId"
 }

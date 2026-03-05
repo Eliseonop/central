@@ -1,9 +1,6 @@
 package com.tcontur.central.core.location
 
-/**
- * Platform-agnostic interface for location services.
- * Concrete implementations live in androidMain / iosMain via Koin.
- */
+
 interface LocationManager {
     /** Returns the current GPS position, or null if unavailable. */
     suspend fun getCurrentLocation(): LocationData?

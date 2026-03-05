@@ -12,7 +12,7 @@ import com.tcontur.central.core.storage.AppStorage
 import com.tcontur.central.core.storage.StorageKeys
 import com.tcontur.central.core.utils.currentFormattedTimestamp
 import com.tcontur.central.data.model.LocationRequest
-import com.tcontur.central.data.remote.LocationApiService
+import com.tcontur.central.data.LocationApiService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

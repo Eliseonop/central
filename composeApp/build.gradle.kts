@@ -55,6 +55,8 @@ kotlin {
             implementation(libs.koin.android)
             // Google Play Services – Fused Location Provider
             implementation(libs.gms.play.services.location)
+            // OkHttp WebSocket (for SocketService)
+            implementation(libs.okhttp)
         }
 
         iosMain.dependencies {

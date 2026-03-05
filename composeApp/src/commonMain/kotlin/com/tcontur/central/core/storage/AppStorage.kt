@@ -2,10 +2,6 @@ package com.tcontur.central.core.storage
 
 import com.russhwolf.settings.Settings
 
-/**
- * Thin wrapper around multiplatform-settings.
- * Backed by SharedPreferences on Android and NSUserDefaults on iOS.
- */
 class AppStorage(private val settings: Settings) {
 
     fun getString(key: String, default: String = ""): String =

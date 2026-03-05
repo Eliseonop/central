@@ -1,37 +1,33 @@
 package com.tcontur.central.core.di
 
-import com.tcontur.central.data.repository.AuthRepositoryImpl
-import com.tcontur.central.data.repository.EmpresaRepositoryImpl
-import com.tcontur.central.domain.repository.AuthRepository
-import com.tcontur.central.domain.repository.EmpresaRepository
-import com.tcontur.central.domain.usecase.CheckLoginStatusUseCase
-import com.tcontur.central.domain.usecase.GetEmpresasUseCase
-import com.tcontur.central.domain.usecase.LoginUseCase
-import com.tcontur.central.domain.usecase.LogoutUseCase
-import com.tcontur.central.domain.usecase.SendLocationUseCase
-import com.tcontur.central.presentation.auth.login.LoginViewModel
-import com.tcontur.central.presentation.role.inspectoria.home.InspectoriaHomeViewModel
-import com.tcontur.central.presentation.splash.SplashViewModel
+import com.russhwolf.settings.Settings
+import com.tcontur.central.core.network.HttpClientFactory
+import com.tcontur.central.core.socket.ProtoSocketManager
+import com.tcontur.central.core.storage.AppStorage
+import com.tcontur.central.data.AuthApiService
+import com.tcontur.central.data.AuthRepositoryImpl
+import com.tcontur.central.data.EmpresaApiService
+import com.tcontur.central.data.LocationApiService
+import com.tcontur.central.inspectoria.home.InspectoriaHomeViewModel
+import com.tcontur.central.inspectoria.loading.SocketLoadingViewModel
+import com.tcontur.central.login.LoginViewModel
+import com.tcontur.central.splash.SplashViewModel
 import org.koin.compose.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 val appModule = module {
-    // ─── Repositories ──────────────────────────────────────────────────────
-    single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
-    single<EmpresaRepository> { EmpresaRepositoryImpl(get(), get()) }
-
-    // ─── Use Cases ─────────────────────────────────────────────────────────
-    single { LoginUseCase(get()) }
-    single { LogoutUseCase(get()) }
-    single { CheckLoginStatusUseCase(get()) }
-    single { GetEmpresasUseCase(get()) }
-    single { SendLocationUseCase(get()) }
-
-    // ─── ViewModels ────────────────────────────────────────────────────────
+    single { HttpClientFactory.create() }
+    single<Settings> { Settings() }
+    single { AppStorage(get()) }
+    single { ProtoSocketManager() }
+    single { AuthApiService(get()) }
+    single { EmpresaApiService(get()) }
+    single { LocationApiService(get()) }
+    single { AuthRepositoryImpl(get(), get()) }
     viewModel { SplashViewModel(get()) }
     viewModel { LoginViewModel(get(), get(), get()) }
-    viewModel { InspectoriaHomeViewModel(get(), get(), get()) }
+    viewModel { SocketLoadingViewModel(get(), get(), get(), get(), get()) }
+    viewModel { InspectoriaHomeViewModel(get(), get(), get(), get()) }
 }
 
-/** All Koin modules shared across platforms. */
-val commonModules = listOf(appModule, networkModule, storageModule)
+val commonModules = listOf(appModule)
