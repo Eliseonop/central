@@ -3,26 +3,26 @@ workflows:
     name: iOS Build
     max_build_duration: 60
     instance_type: mac_mini_m1
-
     environment:
       vars:
-        XCODE_WORKSPACE: "iosApp.xcworkspace"
+        XCODE_WORKSPACE: "iosApp/iosApp.xcworkspace"
         XCODE_SCHEME: "iosApp"
       xcode: latest
-
     scripts:
+      - name: Build KMP framework
+        script: ./gradlew :shared:assembleXCFramework
+
       - name: Install dependencies
-        script: |
-          brew install cocoapods
-          pod install --project-directory=iosApp
+        script: cd iosApp && pod install
 
       - name: Build iOS app
         script: |
-          xcodebuild build \
-            -workspace $XCODE_WORKSPACE \
-            -scheme $XCODE_SCHEME \
+          xcodebuild -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
             -sdk iphoneos \
-            -configuration Release
+            -configuration Release \
+            -archivePath build/ios/archive.xcarchive \
+            archive
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/ios/archive.xcarchive/**
