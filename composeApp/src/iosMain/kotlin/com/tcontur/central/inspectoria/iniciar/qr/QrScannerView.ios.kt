@@ -5,12 +5,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.interop.UIKitView
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
+import kotlinx.cinterop.useContents
 import platform.AVFoundation.*
 import platform.CoreGraphics.CGRectZero
 import platform.Foundation.NSArray
-import platform.Foundation.NSError
 import platform.Foundation.NSObject
-import platform.QuartzCore.*
+import platform.QuartzCore.CALayer
 import platform.UIKit.*
 import platform.darwin.*
 
@@ -19,14 +19,14 @@ private class QrDelegate(
     private val onScanned: (String) -> Unit
 ) : NSObject(), AVCaptureMetadataOutputObjectsDelegateProtocol {
 
-    @ObjCAction
     override fun captureOutput(
         output: AVCaptureOutput,
         didOutputMetadataObjects: NSArray,
         fromConnection: AVCaptureConnection
     ) {
-        val obj = didOutputMetadataObjects.firstOrNull()
-                as? AVMetadataMachineReadableCodeObject
+        val obj = (0 until didOutputMetadataObjects.count.toInt())
+            .mapNotNull { didOutputMetadataObjects.objectAtIndex(it.toULong()) as? AVMetadataMachineReadableCodeObject }
+            .firstOrNull()
         obj?.stringValue?.let { value ->
             dispatch_async(dispatch_get_main_queue()) { onScanned(value) }
         }
@@ -38,7 +38,7 @@ private class IosQrScanner(
     private val onQrScanned: (String) -> Unit,
     private val onError:     (String) -> Unit
 ) {
-    val view    = UIView(CGRectZero)
+    val view = UIView()
     private var session:      AVCaptureSession? = null
     private var delegate:     QrDelegate?       = null
     private var previewLayer: AVCaptureVideoPreviewLayer? = null
@@ -71,7 +71,7 @@ private class IosQrScanner(
         val layer = AVCaptureVideoPreviewLayer(session = s)
         layer.videoGravity = AVLayerVideoGravityResizeAspectFill
         layer.frame = view.bounds
-        view.layer.addSublayer(layer)
+        view.layer.insertSublayer(layer, atIndex = 0u)
         previewLayer = layer
 
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0u)) {
