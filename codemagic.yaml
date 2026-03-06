@@ -12,7 +12,7 @@ workflows:
       - name: Build KMP framework
         script: |
           chmod +x gradlew
-          ./gradlew :shared:assembleXCFramework
+          ./gradlew :composeApp:assembleComposeAppReleaseXCFramework
 
       - name: Install dependencies
         script: cd iosApp && pod install

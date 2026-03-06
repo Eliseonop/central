@@ -11,7 +11,7 @@
  * all unresolvable when iOS targets are also declared — so we stay here.
  */
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 plugins {
     // KMP + Android library
     alias(libs.plugins.kotlinMultiplatform)
@@ -35,6 +35,7 @@ kotlin {
     }
 
     // ── iOS targets ─────────────────────────────────────────────────────────
+    val xcf = XCFramework("ComposeApp")
     listOf(
         iosArm64(),
         iosSimulatorArm64()
@@ -42,6 +43,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            xcf.add(this)
         }
     }
 
