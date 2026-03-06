@@ -4,9 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.interop.UIKitView
 import kotlinx.cinterop.ExperimentalForeignApi
+import platform.CoreGraphics.CGRectZero
 import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSURL
-import platform.Foundation.setValue
 import platform.WebKit.WKWebView
 import platform.WebKit.WKWebViewConfiguration
 
@@ -18,22 +18,18 @@ actual fun WebViewContent(
     onPageFinished: (url: String) -> Unit,
     onError: (description: String) -> Unit
 ) {
-    UIKitView(
+    UIKitView<WKWebView>(
         modifier = modifier,
-        factory  = {
+        factory = {
             val config = WKWebViewConfiguration().apply {
                 allowsInlineMediaPlayback = true
             }
-            val webView = WKWebView(frame = kotlinx.cinterop.CGRectMake(0.0, 0.0, 0.0, 0.0), configuration = config)
-
-            val nsUrl = NSURL.URLWithString(url)
-            if (nsUrl != null) {
-                val request = NSMutableURLRequest.requestWithURL(nsUrl)
-                webView.loadRequest(request)
+            val webView = WKWebView(frame = CGRectZero, configuration = config)
+            NSURL.URLWithString(url)?.let {
+                webView.loadRequest(NSMutableURLRequest.requestWithURL(it))
             }
-
             webView
         },
-        update = { /* no dynamic updates needed */ }
+        update = {}
     )
 }
