@@ -10,7 +10,9 @@ workflows:
       xcode: latest
     scripts:
       - name: Build KMP framework
-        script: ./gradlew :shared:assembleXCFramework
+        script: |
+          chmod +x gradlew
+          ./gradlew :shared:assembleXCFramework
 
       - name: Install dependencies
         script: cd iosApp && pod install
