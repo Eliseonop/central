@@ -7,13 +7,12 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
 import platform.AVFoundation.*
 import platform.CoreGraphics.CGRectZero
+import platform.Foundation.NSArray
 import platform.Foundation.NSError
 import platform.Foundation.NSObject
-import platform.QuartzCore.CALayer
+import platform.QuartzCore.*
 import platform.UIKit.*
 import platform.darwin.*
-
-// ── AVFoundation delegate ─────────────────────────────────────────────────────
 
 @OptIn(ExperimentalForeignApi::class)
 private class QrDelegate(
@@ -23,25 +22,23 @@ private class QrDelegate(
     @ObjCAction
     override fun captureOutput(
         output: AVCaptureOutput,
-        didOutputMetadataObjects: List<*>,
+        didOutputMetadataObjects: NSArray,
         fromConnection: AVCaptureConnection
     ) {
         val obj = didOutputMetadataObjects.firstOrNull()
-            as? AVMetadataMachineReadableCodeObject
+                as? AVMetadataMachineReadableCodeObject
         obj?.stringValue?.let { value ->
             dispatch_async(dispatch_get_main_queue()) { onScanned(value) }
         }
     }
 }
 
-// ── Scanner state holder (keeps AVFoundation objects alive) ───────────────────
-
 @OptIn(ExperimentalForeignApi::class)
 private class IosQrScanner(
     private val onQrScanned: (String) -> Unit,
     private val onError:     (String) -> Unit
 ) {
-    val view    = UIView(CGRectZero.readValue())
+    val view    = UIView(CGRectZero)
     private var session:      AVCaptureSession? = null
     private var delegate:     QrDelegate?       = null
     private var previewLayer: AVCaptureVideoPreviewLayer? = null
@@ -54,7 +51,7 @@ private class IosQrScanner(
         if (device == null) { onError("No se encontró cámara"); return }
 
         val input = AVCaptureDeviceInput.deviceInputWithDevice(device, null)
-            as? AVCaptureDeviceInput
+                as? AVCaptureDeviceInput
         if (input == null) { onError("No se pudo acceder a la cámara"); return }
 
         if (s.canAddInput(input)) s.addInput(input)
@@ -90,8 +87,6 @@ private class IosQrScanner(
     }
 }
 
-// ── Composable actual ─────────────────────────────────────────────────────────
-
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun QrScannerView(
@@ -106,7 +101,7 @@ actual fun QrScannerView(
         onDispose { scanner.stop() }
     }
 
-    UIKitView(
+    UIKitView<UIView>(
         factory  = { scanner.view },
         modifier = modifier
     )
