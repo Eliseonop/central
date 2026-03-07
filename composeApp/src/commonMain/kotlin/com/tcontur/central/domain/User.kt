@@ -1,6 +1,6 @@
 package com.tcontur.central.domain
 
-import com.tcontur.central.data.model.UserRole
+import com.tcontur.central.domain.auth.UserRole
 
 /** Clean domain entity – decoupled from the API serialization model. */
 data class User(

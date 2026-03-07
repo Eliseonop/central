@@ -5,8 +5,8 @@ import com.tcontur.central.core.network.map
 import com.tcontur.central.core.storage.AppStorage
 import com.tcontur.central.core.storage.StorageKeys
 import com.tcontur.central.data.model.UserResponse
-import com.tcontur.central.data.model.UserRole
 import com.tcontur.central.domain.User
+import com.tcontur.central.domain.auth.resolveRole
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -45,6 +45,6 @@ class AuthRepositoryImpl(
         cargo    = cargo,
         empresa  = empresa,
         codigo   = codigo,
-        role     = UserRole.fromCargo(cargo)
+        role     = resolveRole()
     )
 }

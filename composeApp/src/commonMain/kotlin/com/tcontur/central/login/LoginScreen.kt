@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import central.composeapp.generated.resources.*   // Res + all drawable extension properties
+import com.tcontur.central.domain.auth.UserRole
 import com.tcontur.central.ui.theme.TconturBlue
 import com.tcontur.central.ui.theme.TconturGrad0
 import com.tcontur.central.ui.theme.TconturGrad1
@@ -63,7 +64,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (String) -> Unit,
+    onLoginSuccess: (UserRole) -> Unit,
     viewModel: LoginViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -71,7 +72,7 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is LoginEvent.LoginSuccess -> onLoginSuccess(event.user.cargo)
+                is LoginEvent.LoginSuccess -> onLoginSuccess(event.user.role)
             }
         }
     }

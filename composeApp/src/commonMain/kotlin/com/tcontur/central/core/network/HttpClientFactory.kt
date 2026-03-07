@@ -37,6 +37,8 @@ object HttpClientFactory {
         HttpResponseValidator {
             validateResponse { response ->
                 if (response.status.value == 401) {
+                    println("[TCONTUR][HTTP] ⚠️ 401 Unauthorized detectado — URL: ${response.call.request.url}")
+                    println("[TCONTUR][HTTP] 🔔 Notificando SessionEventBus → logout automático")
                     SessionEventBus.notifyUnauthorized()
                     throw ResponseException(response, "Token inválido – sesión expirada")
                 }

@@ -2,6 +2,7 @@ package com.tcontur.central.core.nav
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,11 +15,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.tcontur.central.core.network.SessionEventBus
 import com.tcontur.central.core.permission.StartupPermissionsScreen
-import com.tcontur.central.data.AuthRepositoryImpl
-import com.tcontur.central.login.LoginScreen
-import com.tcontur.central.inspectoria.loading.SocketLoadingScreen
+import com.tcontur.central.core.session.SessionManager
+import com.tcontur.central.domain.auth.UserRole
+import com.tcontur.central.inspectoria.initializer.InspectoriaInitializerScreen
 import com.tcontur.central.inspectoria.inspectoriaNavGraph
+import com.tcontur.central.login.LoginScreen
 import com.tcontur.central.splash.SplashScreen
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
@@ -27,11 +30,13 @@ fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     startDestination: Any = StartupPermissions  // ← permissions gate is always first
 ) {
-    val authRepository: AuthRepositoryImpl = koinInject()
+    val sessionManager: SessionManager = koinInject()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         SessionEventBus.unauthorized.collect {
-            authRepository.logout()
+            // Full session shutdown: stop location service + disconnect socket + clear storage
+            sessionManager.logout()
             navController.navigate(Login) {
                 popUpTo(0) { inclusive = true }
             }
@@ -66,9 +71,8 @@ fun AppNavHost(
                         popUpTo(Splash) { inclusive = true }
                     }
                 },
-                onNavigateToRole = { role ->
-                    // Always go through SocketLoading so the WS connects before home
-                    navController.navigate(SocketLoading(role)) {
+                onNavigateToRole = { role: UserRole ->
+                    navController.navigate(RoleRouter(role)) {
                         popUpTo(Splash) { inclusive = true }
                     }
                 }
@@ -78,24 +82,39 @@ fun AppNavHost(
         // ── Login ─────────────────────────────────────────────────────────────
         composable<Login> {
             LoginScreen(
-                onLoginSuccess = { role ->
-                    // Show full-screen loading while the WebSocket connects
-                    navController.navigate(SocketLoading(role)) {
+                onLoginSuccess = { role: UserRole ->
+                    navController.navigate(RoleRouter(role)) {
                         popUpTo(Login) { inclusive = true }
                     }
                 }
             )
         }
 
-        // ── Socket Loading ────────────────────────────────────────────────────
-        // Full-screen loading – waits for WebSocket connection + login confirmation.
-        composable<SocketLoading> { backStackEntry ->
-            val args = backStackEntry.toRoute<SocketLoading>()
-            SocketLoadingScreen(
+        // ── Role Router ───────────────────────────────────────────────────────
+        // Invisible routing composable: reads the role and immediately navigates
+        // to the correct initializer or root. No UI is shown.
+        composable<RoleRouter> { backStackEntry ->
+            val args = backStackEntry.toRoute<RoleRouter>()
+            LaunchedEffect(Unit) {
+                val dest = when (args.role) {
+                    UserRole.INSPECTORIA -> InspectoriaInitializer   // needs socket + GPS
+                    UserRole.CONDUCTOR   -> ConductorRoot             // no socket/GPS
+                    UserRole.ADMIN       -> AdminRoot                 // no socket/GPS
+                    UserRole.UNKNOWN     -> InspectoriaInitializer    // safe default
+                }
+                navController.navigate(dest) {
+                    popUpTo(RoleRouter(args.role)) { inclusive = true }
+                }
+            }
+        }
+
+        // ── Inspectoria initializer ───────────────────────────────────────────
+        // Inspectoria-only: fetches empresa, connects socket, authenticates, starts GPS.
+        composable<InspectoriaInitializer> {
+            InspectoriaInitializerScreen(
                 onConnected = {
-                    val destination = roleDestination(args.role)
-                    navController.navigate(destination) {
-                        popUpTo(SocketLoading(args.role)) { inclusive = true }
+                    navController.navigate(InspectoriaRoot) {
+                        popUpTo(InspectoriaInitializer) { inclusive = true }
                     }
                 }
             )
@@ -105,8 +124,12 @@ fun AppNavHost(
         inspectoriaNavGraph(
             navController = navController,
             onLogout = {
-                navController.navigate(Login) {
-                    popUpTo(0) { inclusive = true }
+                // Full session shutdown: stop location service + disconnect socket + clear storage
+                scope.launch {
+                    sessionManager.logout()
+                    navController.navigate(Login) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             }
         )
@@ -117,10 +140,3 @@ fun AppNavHost(
     }
 }
 
-/** Maps a user role string to the corresponding navigation destination. */
-private fun roleDestination(role: String): Any = when (role.lowercase()) {
-    "inspector", "inspectoria" -> InspectoriaRoot
-    "conductor"                -> ConductorRoot
-    "admin", "administrador"   -> AdminRoot
-    else                       -> InspectoriaRoot // safe default
-}

@@ -1,13 +1,17 @@
 package com.tcontur.central.inspectoria.iniciar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
@@ -24,6 +28,15 @@ import com.tcontur.central.inspectoria.iniciar.qr.QrScannerView
 import com.tcontur.central.ui.theme.TconturAppBar
 import com.tcontur.central.ui.theme.TconturBlue
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.text.input.KeyboardType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,94 +138,103 @@ fun IniciarInspeccionScreen(
     }
 }
 
-// ── Formulario Tab ─────────────────────────────────────────────────────────────
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FormularioTab(
     state: IniciarInspeccionState,
     viewModel: IniciarInspeccionViewModel
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf(state.selectedUnidad?.displayText ?: "") }
+    var showList by remember { mutableStateOf(false) }
+
+    val filtered = state.filteredUnidades
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Unidad", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color.Gray)
-
         if (state.isLoadingUnidades) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         } else {
-            ExposedDropdownMenuBox(
-                expanded         = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value          = state.selectedUnidad?.displayText ?: "",
-                    onValueChange  = {},
-                    readOnly       = true,
-                    label          = { Text("Selecciona una unidad") },
-                    trailingIcon   = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier       = Modifier
+            OutlinedTextField(
+                value         = query,
+                onValueChange = { query = it; showList = true; viewModel.onUnidadQueryChange(it) },
+                label         = { Text("Buscar unidad") },
+                placeholder   = { Text("Ej: 1023, Troncal 5...") },
+                singleLine    = true,
+                keyboardOptions  = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier      = Modifier.fillMaxWidth(),
+                trailingIcon  = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = ""; showList = false; viewModel.onUnidadQueryChange("") }) {
+                            Icon(Icons.Default.Close, contentDescription = null)
+                        }
+                    }
+                }
+            )
+
+            if (showList && filtered.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                )
-                ExposedDropdownMenu(
-                    expanded         = expanded,
-                    onDismissRequest = { expanded = false }
+                        .heightIn(max = 240.dp),
+                    elevation = CardDefaults.cardElevation(4.dp)
                 ) {
-                    state.unidades.forEach { option ->
-                        DropdownMenuItem(
-                            text    = { Text(option.displayText) },
-                            onClick = { viewModel.selectUnidad(option); expanded = false }
-                        )
+                    LazyColumn {
+                        items(filtered) { option ->
+                            ListItem(
+                                headlineContent = { Text(option.displayText) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        query = option.displayText
+                                        showList = false
+                                        viewModel.selectUnidad(option)
+                                    }
+                            )
+                            HorizontalDivider()
+                        }
                     }
                 }
             }
         }
 
-        // ── Proximity status ───────────────────────────────────────────────────
-        when (state.proximityStatus) {
-            ProximityStatus.CHECKING -> Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Text("Verificando cercanía...", fontSize = 13.sp, color = Color.Gray)
-            }
-            ProximityStatus.VALID -> Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(20.dp))
-                Column {
-                    Text("Unidad cercana detectada", fontSize = 13.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Medium)
-                    state.subidaNombre?.let { Text("Paradero: $it", fontSize = 12.sp, color = Color.Gray) }
-                }
-            }
-            ProximityStatus.INVALID -> Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                Text("No estás cerca de la unidad", fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
-            }
-            ProximityStatus.IDLE -> {}
-        }
-
-        // ── Ticketera ──────────────────────────────────────────────────────────
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Checkbox(checked = state.ticketera, onCheckedChange = viewModel::setTicketera)
-            Spacer(Modifier.width(8.dp))
-            Text("Usa ticketera", fontSize = 14.sp)
-        }
+        ProximityIndicator(state)
     }
 }
 
+@Composable
+private fun ProximityIndicator(state: IniciarInspeccionState) {
+    when (state.proximityStatus) {
+        ProximityStatus.CHECKING -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            Text("Verificando cercanía...", fontSize = 13.sp, color = Color.Gray)
+        }
+        ProximityStatus.VALID -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(20.dp))
+            Column {
+                Text("Unidad cercana detectada", fontSize = 13.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Medium)
+                state.subidaNombre?.let { Text("Paradero: $it", fontSize = 12.sp, color = Color.Gray) }
+            }
+        }
+        ProximityStatus.INVALID -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+            Text("No estás cerca de la unidad", fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
+        }
+        ProximityStatus.IDLE -> {}
+    }
+}
 // ── QR Tab ─────────────────────────────────────────────────────────────────────
 
 @Composable

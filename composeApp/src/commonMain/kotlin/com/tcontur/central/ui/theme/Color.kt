@@ -27,7 +27,7 @@ val TconturBlueLight = Color(0xFF5E92F3)   // light blue — light scheme primar
 val TconturAccent    = Color(0xFFFFAB00)   // amber — MaterialTheme secondary
 
 // ─── Neutral ──────────────────────────────────────────────────────────────────
-val Surface          = Color(0xFFF5F7FA)
-val OnSurface        = Color(0xFF1A1A2E)
-val Error            = Color(0xFFB00020)
-val OnError          = Color(0xFFFFFFFF)
+val Surface   = Color(0xFFE8EAED)   // gris humo claro
+val OnSurface = Color(0xFF1A1A2E)   // texto oscuro (bien como está)
+val Error     = Color(0xFFB00020)
+val OnError   = Color(0xFFF2F2F2)   // blanco suavizado

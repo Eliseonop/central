@@ -139,11 +139,7 @@ class LocationForegroundService : Service() {
         }
         Log.d(TAG, "✅ [2] Login confirmado por el servidor — GPS tracking habilitado")
 
-        // ── 4. Logueado ✓ ─────────────────────────────────────────────────────
-        updateNotification("🟢 Logueado ✓", Color.GREEN)
-        delay(800)
-
-        // ── 5. Iniciar GPS tracking ────────────────────────────────────────────
+        // ── 4. GPS tracking ───────────────────────────────────────────────────
         Log.d(TAG, "📍 [3] Iniciando FusedLocationProvider...")
         withContext(Dispatchers.Main) { startLocationUpdates() }
     }
@@ -173,10 +169,10 @@ class LocationForegroundService : Service() {
             override fun onLocationResult(result: LocationResult) {
                 val raw = result.lastLocation ?: return
 
-                // Always emit to repository
+                // Always emit to repository (UI observers)
                 locationRepo.emit(LocationData(raw.latitude, raw.longitude, raw.accuracy, raw.time))
 
-                // Skip inaccurate fixes
+                // Skip inaccurate fixes for socket send
                 if (raw.accuracy > MIN_ACCURACY_METERS) {
                     Log.v(TAG, "📍 Fix ignorado — precisión insuficiente: ${raw.accuracy}m (máx ${MIN_ACCURACY_METERS}m)")
                     return
@@ -190,10 +186,8 @@ class LocationForegroundService : Service() {
                     raw.latitude, raw.longitude, raw.accuracy
                 ))
 
-                updateNotification(
-                    "🟢 Conectado [%.5f, %.5f]".format(raw.latitude, raw.longitude),
-                    Color.GREEN
-                )
+                // Notification is NOT updated here — it stays "🟢 Conectado"
+                // to avoid flickering back to "🔴 Iniciando..." on every send.
 
                 val dt = LocalDateTime.ofEpochSecond(now / 1000L, 0, ZoneOffset.UTC)
                 SocketService.sendMessage(
@@ -216,6 +210,8 @@ class LocationForegroundService : Service() {
             ).addOnSuccessListener {
                 Log.d(TAG, "✅ FusedLocationProvider activo — tracking ON")
                 locationRepo.setTracking(true)
+                // Set final stable notification — stays here until service is destroyed
+                updateNotification("🟢 Conectado", Color.GREEN)
             }.addOnFailureListener { e ->
                 Log.e(TAG, "❌ Error al iniciar FusedLocationProvider: ${e.message}")
                 updateNotification("⛔ Error al iniciar GPS", Color.RED)

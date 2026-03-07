@@ -5,6 +5,7 @@ import com.tcontur.central.data.model.*
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
@@ -147,11 +148,20 @@ class InspeccionApiService(private val client: HttpClient) {
         lat: Double,
         lng: Double
     ): ApiResult<ValidarCercaniaResponse> = runCatching {
-        client.post("${base(empresaCodigo)}/api/unidades/validar_cercania") {
+
+        val response = client.post("${base(empresaCodigo)}/api/unidades/validar_cercania") {
             auth(token)
             contentType(ContentType.Application.Json)
             setBody(ValidarCercaniaBody(posicion = PosDto(lat, lng), unidad = unidadId))
-        }.body<ValidarCercaniaResponse>()
+        }
+
+        val raw = response.bodyAsText()
+
+        println("VALIDAR_CERCANIA RAW RESPONSE:")
+        println(raw)
+
+        kotlinx.serialization.json.Json.decodeFromString<ValidarCercaniaResponse>(raw)
+
     }.toApiResult("Error al validar cercanía")
 
     // ── Body DTOs ─────────────────────────────────────────────────────────────

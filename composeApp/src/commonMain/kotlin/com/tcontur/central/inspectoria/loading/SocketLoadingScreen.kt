@@ -1,3 +1,4 @@
+// Moved to com.tcontur.central.inspectoria.initializer.InspectoriaInitializerScreen
 package com.tcontur.central.inspectoria.loading
 
 import androidx.compose.animation.Crossfade

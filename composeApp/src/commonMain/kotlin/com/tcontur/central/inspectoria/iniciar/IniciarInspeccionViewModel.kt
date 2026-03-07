@@ -33,6 +33,8 @@ data class IniciarInspeccionState(
     val subidaLng: Double? = null,
     val proximityStatus: ProximityStatus = ProximityStatus.IDLE,
     val isLoadingUnidades: Boolean = false,
+    val unidadQuery: String = "",
+    val filteredUnidades: List<UnidadOption> = emptyList(),
     // ── QR tab ────────────────────────────────────────────────────────────────
     val qrData: QrData? = null,     // non-null = scan succeeded
     val qrScanKey: Int = 0,         // increment to remount scanner
@@ -66,11 +68,30 @@ class IniciarInspeccionViewModel(
 
     // ── Formulario ────────────────────────────────────────────────────────────
 
-    fun selectUnidad(option: UnidadOption) {
-        _state.update { it.copy(selectedUnidad = option, proximityStatus = ProximityStatus.IDLE) }
-        validateProximity(option)
+
+    fun onUnidadQueryChange(query: String) {
+        _state.update {
+            it.copy(
+                unidadQuery       = query,
+                selectedUnidad    = null,
+                proximityStatus   = ProximityStatus.IDLE,
+                filteredUnidades  = if (query.isBlank()) it.unidades
+                else it.unidades.filter { u -> u.displayText.contains(query, ignoreCase = true) }
+            )
+        }
     }
 
+    fun selectUnidad(option: UnidadOption) {
+        _state.update {
+            it.copy(
+                selectedUnidad   = option,
+                unidadQuery      = option.displayText,
+                filteredUnidades = emptyList(),
+                proximityStatus  = ProximityStatus.IDLE
+            )
+        }
+        validateProximity(option)
+    }
     fun setTicketera(value: Boolean) = _state.update { it.copy(ticketera = value) }
 
     fun clearError() = _state.update { it.copy(error = null) }
@@ -79,16 +100,18 @@ class IniciarInspeccionViewModel(
 
     /** Called by the UI when the camera layer decodes a QR string. */
     fun onQrScanned(raw: String) {
+        println("QR_SCAN raw=$raw")
         val data = try {
-            QrParser.parse(raw)
+            QrParser.parse(raw).also { println("QR_SCAN parsed=$it") }
         } catch (e: QrError) {
+            println("QR_SCAN QrError: ${e.message}")
             _state.update { it.copy(error = e.message) }
             return
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            println("QR_SCAN Exception: ${e.message}")
             _state.update { it.copy(error = "QR con formato inválido") }
             return
         }
-        // Success → store parsed data; ticketera is always true for QR flow
         _state.update { it.copy(qrData = data) }
     }
 
@@ -172,7 +195,7 @@ class IniciarInspeccionViewModel(
             when (val r = inspeccionApi.getUnidades(code, token)) {
                 is ApiResult.Success -> {
                     val opts = r.data.map { UnidadOption(it.id, it.padron?.padron, it.placa) }
-                    _state.update { it.copy(unidades = opts, isLoadingUnidades = false) }
+                    _state.update { it.copy(unidades = opts, filteredUnidades = opts, isLoadingUnidades = false) }
                 }
                 is ApiResult.Error -> _state.update {
                     it.copy(isLoadingUnidades = false, error = r.message)

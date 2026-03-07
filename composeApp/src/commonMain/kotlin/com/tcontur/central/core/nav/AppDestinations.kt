@@ -1,5 +1,6 @@
 package com.tcontur.central.core.nav
 
+import com.tcontur.central.domain.auth.UserRole
 import kotlinx.serialization.Serializable
 
 
@@ -23,8 +24,13 @@ object ConductorRoot   // Placeholder – extend when role is ready
 object AdminRoot       // Placeholder – extend when role is ready
 
 
+/** Routes immediately to the role-specific initializer or root. No UI. */
 @Serializable
-data class SocketLoading(val role: String)
+data class RoleRouter(val role: UserRole)
+
+/** Inspectoria-only initializer: connects socket, authenticates, starts GPS. */
+@Serializable
+object InspectoriaInitializer
 
 
 // ── Inspectoria destinations ───────────────────────────────────────────────────

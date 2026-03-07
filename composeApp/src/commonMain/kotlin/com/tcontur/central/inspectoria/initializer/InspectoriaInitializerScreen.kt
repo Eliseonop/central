@@ -1,11 +1,10 @@
-package com.tcontur.central.splash
+package com.tcontur.central.inspectoria.initializer
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,28 +12,25 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import central.composeapp.generated.resources.Res
 import central.composeapp.generated.resources.ic_launcher_playstore
-import com.tcontur.central.domain.auth.UserRole
 import com.tcontur.central.ui.theme.TconturBlue
 import com.tcontur.central.ui.theme.TconturBlueDark
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SplashScreen(
-    onNavigateToLogin: () -> Unit,
-    onNavigateToRole: (UserRole) -> Unit,
-    viewModel: SplashViewModel = koinViewModel()
+fun InspectoriaInitializerScreen(
+    onConnected: () -> Unit,
+    viewModel: InspectoriaInitializerViewModel = koinViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val event by viewModel.events.collectAsStateWithLifecycle()
 
-    LaunchedEffect(state) {
-        when (val s = state) {
-            is SplashState.Authenticated   -> onNavigateToRole(s.role)
-            is SplashState.Unauthenticated -> onNavigateToLogin()
-            SplashState.Loading            -> Unit
+    LaunchedEffect(event) {
+        if (event is InspectoriaInitializerEvent.NavigateToHome) {
+            viewModel.consumeEvent()
+            onConnected()
         }
     }
 
@@ -56,8 +52,7 @@ fun SplashScreen(
 
             Spacer(Modifier.height(40.dp))
 
-//            BouncingDots()
-            Text("TCONTUR CENTRAL", color = Color.White, fontSize = 18.dp.value.sp)
+            BouncingDots()
         }
     }
 }
@@ -66,6 +61,7 @@ fun SplashScreen(
 private fun BouncingDots() {
     val transition = rememberInfiniteTransition(label = "dots")
 
+    // Cada punto tiene un delay escalonado de 200ms
     val scales = listOf(0, 200, 400).map { delayMs ->
         transition.animateFloat(
             initialValue  = 0.4f,

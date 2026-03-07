@@ -1,5 +1,4 @@
-// Moved to com.tcontur.central.inspectoria.initializer.InspectoriaInitializerViewModel
-package com.tcontur.central.inspectoria.loading
+package com.tcontur.central.inspectoria.initializer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,8 +7,8 @@ import com.tcontur.central.core.socket.ProtoSocketManager
 import com.tcontur.central.core.socket.SocketEvent
 import com.tcontur.central.core.socket.SocketServiceManager
 import com.tcontur.central.core.storage.AppStorage
-import com.tcontur.central.data.AuthRepositoryImpl
 import com.tcontur.central.core.storage.StorageKeys
+import com.tcontur.central.data.AuthRepositoryImpl
 import com.tcontur.central.data.EmpresaApiService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,18 +16,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val TAG = "[TCONTUR][SOCKET_LOADING]"
+private const val TAG = "[TCONTUR][INSPECTORIA_INIT]"
 
-data class SocketLoadingState(
+data class InspectoriaInitializerState(
     val isConnected: Boolean = false,
     val statusMessage: String = "Conectando con el servidor..."
 )
 
-sealed class SocketLoadingEvent {
-    data object NavigateToHome : SocketLoadingEvent()
+sealed class InspectoriaInitializerEvent {
+    data object NavigateToHome : InspectoriaInitializerEvent()
 }
 
-class SocketLoadingViewModel(
+class InspectoriaInitializerViewModel(
     private val storage: AppStorage,
     private val authRepository: AuthRepositoryImpl,
     private val protoSocketManager: ProtoSocketManager,
@@ -36,11 +35,11 @@ class SocketLoadingViewModel(
     private val empresaApiService: EmpresaApiService
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SocketLoadingState())
-    val state: StateFlow<SocketLoadingState> = _state
+    private val _state = MutableStateFlow(InspectoriaInitializerState())
+    val state: StateFlow<InspectoriaInitializerState> = _state
 
-    private val _events = MutableStateFlow<SocketLoadingEvent?>(null)
-    val events: StateFlow<SocketLoadingEvent?> = _events
+    private val _events = MutableStateFlow<InspectoriaInitializerEvent?>(null)
+    val events: StateFlow<InspectoriaInitializerEvent?> = _events
 
     init {
         println("$TAG ViewModel creado — iniciando conexión")
@@ -63,11 +62,7 @@ class SocketLoadingViewModel(
                     is ApiResult.Success -> {
                         val ip = result.data.compute
                         println("$TAG Empresa encontrada — compute IP: '${ip.ifBlank { "(vacío — usando fallback)" }}'")
-                        if (ip.isNotBlank()) {
-                            "ws://$ip:22222?tipo=I"
-                        } else {
-                            fallbackWsUrl()
-                        }
+                        if (ip.isNotBlank()) "ws://$ip:22222?tipo=I" else fallbackWsUrl()
                     }
                     else -> {
                         println("$TAG Error al obtener empresa — usando fallback")
@@ -81,7 +76,7 @@ class SocketLoadingViewModel(
 
             if (wsUrl.isNotBlank()) {
                 println("$TAG 🚀 Iniciando tracking y conexión WS → $wsUrl")
-                socketServiceManager.startLocationTracking()
+                socketServiceManager.startLocationTracking()   // Inspectoria-only
                 socketServiceManager.connect(wsUrl)
             } else {
                 println("$TAG ❌ No se pudo determinar la URL del WS — sin conexión")
@@ -112,7 +107,7 @@ class SocketLoadingViewModel(
         }
     }
 
-    // ── Step 3: wait for server's login confirmation (header "L") ─────────────
+    // ── Step 3: wait for server's login confirmation ──────────────────────────
 
     private fun observeLoginConfirmation() {
         viewModelScope.launch {
@@ -120,11 +115,10 @@ class SocketLoadingViewModel(
                 if (event is SocketEvent.MessageDecoded && event.header == "login") {
                     println("$TAG 🟢 Login confirmado por el servidor — data: ${event.data}")
                     protoSocketManager.setAuthenticated(true)
-
                     _state.update { it.copy(isConnected = true, statusMessage = "¡Conexión exitosa!") }
                     delay(600)
-                    println("$TAG 🏠 Navegando a Home")
-                    _events.value = SocketLoadingEvent.NavigateToHome
+                    println("$TAG 🏠 Navegando a InspectoriaRoot")
+                    _events.value = InspectoriaInitializerEvent.NavigateToHome
                 }
             }
         }

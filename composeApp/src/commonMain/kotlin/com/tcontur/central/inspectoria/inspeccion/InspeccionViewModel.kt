@@ -29,6 +29,7 @@ data class InspeccionState(
     val totalPasajerosMonto: Double = 0.0,
     val isLoading: Boolean = false,
     val error: String? = null,
+    val cercaniaMessage: String? = null,  // proximity result shown before finalize
     val showCancelDialog: Boolean = false,
     val cancelMotivo: String = "",
     val showFinalizeDialog: Boolean = false,
@@ -262,15 +263,36 @@ class InspeccionViewModel(
             val token = storage.getString(StorageKeys.AUTH_TOKEN)
             val code  = storage.getString(StorageKeys.EMPRESA_CODE)
 
-            // Get current GPS for bajada position
+            // 1. Get current GPS for bajada position
             val loc = locationManager.getCurrentLocation()
             val bajadaPos = if (loc != null) PosDto(loc.latitude, loc.longitude) else null
 
+            // 2. Validate proximity → derive bajadaId (paradero stop ID).
+            //    Mirrors Angular: non-blocking — inspection finalizes regardless of validation result.
+            //    If inspector is far, bajadaId stays null and no stop is recorded.
+            var bajadaId: Int? = null
+            if (loc != null) {
+                val cercaniaResult = inspeccionApi.validarCercania(
+                    code, token, insp.unidadId, loc.latitude, loc.longitude
+                )
+                if (cercaniaResult is ApiResult.Success) {
+                    val cercania = cercaniaResult.data
+                    bajadaId = cercania.paradero.takeIf { it > 0 }
+                    val msg = if (cercania.validation)
+                        "Cercanía confirmada con la unidad"
+                    else
+                        "Lejos de la unidad, se cerrará sin paradero de bajada"
+                    _state.update { it.copy(cercaniaMessage = msg) }
+                }
+                // If cercanía call fails, proceed without bajadaId (same as Angular failure handling)
+            }
+
+            // 3. Build payload and finalize
             val cortesDto = s.cortes.map { c ->
                 InspeccionApiService.CorteFinDto(
-                    boleto         = c.boletoId,
-                    numero         = c.numero,
-                    reintegros     = c.reintegros,
+                    boleto          = c.boletoId,
+                    numero          = c.numero,
+                    reintegros      = c.reintegros,
                     pasajeros_vivos = c.pasajerosVivos
                 )
             }
@@ -288,7 +310,7 @@ class InspeccionViewModel(
                 cortesDto,
                 s.totalReintegros, s.totalReintegrosMonto,
                 s.totalPasajeros, s.totalPasajerosMonto,
-                null, bajadaPos,
+                bajadaId, bajadaPos,
                 ocurrenciasDto
             )) {
                 is ApiResult.Success -> _events.value = InspeccionEvent.Finalized
@@ -297,6 +319,8 @@ class InspeccionViewModel(
             }
         }
     }
+
+    fun clearCercaniaMessage() = _state.update { it.copy(cercaniaMessage = null) }
 
     fun clearError() = _state.update { it.copy(error = null) }
     fun consumeEvent() { _events.value = null }

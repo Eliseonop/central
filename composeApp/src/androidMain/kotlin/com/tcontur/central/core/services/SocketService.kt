@@ -82,11 +82,14 @@ class SocketService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        // startForeground() must be called once per service lifecycle.
+        // Calling it again in onStartCommand() would overwrite the notification
+        // managed by LocationForegroundService (same NOTIFICATION_ID).
+        startForeground(NOTIFICATION_ID, createNotification())
         Log.d(TAG, "🚀 SocketService creado")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, createNotification())
         when (intent?.action) {
             ACTION_CONNECT -> {
                 val url = intent.getStringExtra(EXTRA_URL) ?: return START_STICKY
