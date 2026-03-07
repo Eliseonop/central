@@ -39,9 +39,9 @@ object InspectoriaInitializer
 @Serializable
 object InspectoriaDashboard
 
-/** Pantalla para iniciar una nueva inspección. */
+/** Pantalla para iniciar una nueva inspección. initialTab: 0=Formulario, 1=QR, 2=Mapa */
 @Serializable
-object IniciarInspeccion
+data class IniciarInspeccion(val initialTab: Int = 1)
 
 /** Pantalla de edición de una inspección activa. */
 @Serializable

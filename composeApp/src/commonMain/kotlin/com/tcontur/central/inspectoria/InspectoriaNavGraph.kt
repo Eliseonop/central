@@ -44,21 +44,24 @@ fun NavGraphBuilder.inspectoriaNavGraph(
             }
 
             InspectoriaDashboardScreen(
-                onIniciar   = { navController.navigate(IniciarInspeccion) },
-                onContinuar = { id -> navController.navigate(InspeccionActiva(id)) },
-                onLogout    = onLogout
+                onIniciar     = { navController.navigate(IniciarInspeccion(initialTab = 1)) },
+                onIniciarMapa = { navController.navigate(IniciarInspeccion(initialTab = 2)) },
+                onContinuar   = { id -> navController.navigate(InspeccionActiva(id)) },
+                onLogout      = onLogout
             )
         }
 
         // ── Iniciar inspección ─────────────────────────────────────────────────
-        composable<IniciarInspeccion> {
+        composable<IniciarInspeccion> { backStackEntry ->
+            val route: IniciarInspeccion = backStackEntry.toRoute()
             IniciarInspeccionScreen(
-                onCreated = { id ->
+                onCreated    = { id ->
                     navController.navigate(InspeccionActiva(id)) {
                         popUpTo(InspectoriaDashboard) { inclusive = false }
                     }
                 },
-                onBack = { navController.popBackStack() }
+                onBack       = { navController.popBackStack() },
+                initialTab   = route.initialTab
             )
         }
 

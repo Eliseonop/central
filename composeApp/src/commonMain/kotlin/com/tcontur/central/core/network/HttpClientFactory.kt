@@ -7,6 +7,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
@@ -29,18 +30,23 @@ object HttpClientFactory {
             }
         }
 
-        // ── Global 401 guard ──────────────────────────────────────────────────
-        // If any request returns 401 (token inválido), notify SessionEventBus
-        // so the navigation layer clears the session and forces Login.
-        // Throwing here prevents runCatching{}.body<T>() from crashing trying
-        // to deserialize the error JSON as the expected response type.
+        // ── Global HTTP error guard ───────────────────────────────────────────
+        // Intercepts all non-2xx responses BEFORE .body<T>() is called, so
+        // Ktor never tries to deserialize an error JSON as the success type
+        // (which would produce a confusing JsonConvertException).
         HttpResponseValidator {
             validateResponse { response ->
-                if (response.status.value == 401) {
-                    println("[TCONTUR][HTTP] ⚠️ 401 Unauthorized detectado — URL: ${response.call.request.url}")
-                    println("[TCONTUR][HTTP] 🔔 Notificando SessionEventBus → logout automático")
+                val status = response.status.value
+                if (status == 401) {
+                    println("[TCONTUR][HTTP] ⚠️ 401 Unauthorized — URL: ${response.call.request.url}")
                     SessionEventBus.notifyUnauthorized()
                     throw ResponseException(response, "Token inválido – sesión expirada")
+                }
+                if (status !in 200..299) {
+                    val body = response.bodyAsText()
+                    println("[TCONTUR][HTTP] ⚠️ HTTP $status — URL: ${response.call.request.url}")
+                    println("[TCONTUR][HTTP] ⚠️ Body: $body")
+                    throw ResponseException(response, "Error $status: $body")
                 }
             }
         }

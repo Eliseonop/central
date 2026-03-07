@@ -20,7 +20,10 @@
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid)",
       "WebFetch(domain:urbanito-23lnu3rcea-uc.a.run.app)",
       "Bash(\"C:\\\\Users\\\\edu\\\\Desktop\\\\TCONTUR\\\\android\\\\central\\\\composeApp\\\\src\\\\commonMain\\\\kotlin\\\\com\\\\tcontur\\\\central\\\\core\\\\network\\\\HttpClientFactory.kt\":*)",
-      "Bash(xargs grep -l \"WebView\\\\|webView\\\\|WKWebView\")"
+      "Bash(xargs grep -l \"WebView\\\\|webView\\\\|WKWebView\")",
+      "Bash(xargs grep -l \"currentTimeMillis\")",
+      "Bash(xargs grep -l \"_ins.iniciar\\\\|iniciar\\(\")",
+      "Bash(xargs grep -l \"HttpClient\\\\|ContentNegotiation\\\\|Json.*plugin\\\\|install.*Json\")"
     ]
   }
 }
