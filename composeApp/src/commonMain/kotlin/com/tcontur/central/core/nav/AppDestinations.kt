@@ -3,6 +3,10 @@ package com.tcontur.central.core.nav
 import kotlinx.serialization.Serializable
 
 
+/** First destination: requests all OS permissions before anything else. */
+@Serializable
+object StartupPermissions
+
 @Serializable
 object Splash
 
@@ -25,7 +29,7 @@ data class SocketLoading(val role: String)
 
 // ── Inspectoria destinations ───────────────────────────────────────────────────
 
-/** Dashboard principal de inspectoría (reemplaza el WebView). */
+/** Dashboard principal de inspectoría. */
 @Serializable
 object InspectoriaDashboard
 
@@ -45,6 +49,3 @@ object LocationPermission
 @Serializable
 object LocationService
 
-// ── Legacy (no longer navigated to) ──────────────────────────────────────────
-@Serializable
-object InspectoriaHome

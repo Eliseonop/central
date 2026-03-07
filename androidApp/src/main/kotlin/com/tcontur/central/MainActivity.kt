@@ -11,6 +11,9 @@ import androidx.core.view.WindowCompat
  *
  * The entire Compose UI tree ([App]) is defined in the :composeApp KMP library.
  * This class is intentionally kept minimal — all logic lives in the shared module.
+ *
+ * Permissions (POST_NOTIFICATIONS + LOCATION) are requested by [StartupPermissionsScreen],
+ * the first destination in the nav graph, so no permission handling is needed here.
  */
 class MainActivity : ComponentActivity() {
 

@@ -29,7 +29,6 @@ fun OcurrenciasTab(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
 
-        // ── Formulario de nueva ocurrencia ────────────────────────────────────
         Surface(shadowElevation = 4.dp) {
             Column(
                 modifier = Modifier
@@ -55,7 +54,6 @@ fun OcurrenciasTab(
                     }
                 )
 
-                // Cargo selector
                 var cargoExpanded = false
                 ExposedDropdownMenuBox(
                     expanded        = false,
@@ -90,7 +88,6 @@ fun OcurrenciasTab(
             }
         }
 
-        // ── Lista de ocurrencias ──────────────────────────────────────────────
         if (state.ocurrencias.isEmpty()) {
             Box(
                 modifier         = Modifier.fillMaxSize().padding(32.dp),

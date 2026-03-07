@@ -19,7 +19,8 @@
       "Bash(powershell -File \"C:\\\\Users\\\\edu\\\\AppData\\\\Local\\\\Temp\\\\write_dateutils.ps1\")",
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid)",
       "WebFetch(domain:urbanito-23lnu3rcea-uc.a.run.app)",
-      "Bash(\"C:\\\\Users\\\\edu\\\\Desktop\\\\TCONTUR\\\\android\\\\central\\\\composeApp\\\\src\\\\commonMain\\\\kotlin\\\\com\\\\tcontur\\\\central\\\\core\\\\network\\\\HttpClientFactory.kt\":*)"
+      "Bash(\"C:\\\\Users\\\\edu\\\\Desktop\\\\TCONTUR\\\\android\\\\central\\\\composeApp\\\\src\\\\commonMain\\\\kotlin\\\\com\\\\tcontur\\\\central\\\\core\\\\network\\\\HttpClientFactory.kt\":*)",
+      "Bash(xargs grep -l \"WebView\\\\|webView\\\\|WKWebView\")"
     ]
   }
 }

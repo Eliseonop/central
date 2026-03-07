@@ -11,16 +11,7 @@ import androidx.compose.ui.unit.sp
 import com.tcontur.central.inspectoria.inspeccion.InspeccionState
 import com.tcontur.central.inspectoria.inspeccion.InspeccionViewModel
 
-/**
- * "Cobros" primary tab.
- *
- * Contains two sub-tabs:
- *  0 – Reintegros    (refunds per ticket type)
- *  1 – Pasajeros Vivos (live passengers per ticket type)
- *
- * Sub-tab state is kept in [InspeccionState.selectedCobrosTab] so it
- * survives navigation between the three primary tabs.
- */
+
 @Composable
 fun CobrosTab(
     state: InspeccionState,
@@ -30,7 +21,6 @@ fun CobrosTab(
 
     Column(modifier = Modifier.fillMaxSize()) {
 
-        // ── Sub-tab header ────────────────────────────────────────────────────
         TabRow(selectedTabIndex = state.selectedCobrosTab) {
             subtabTitles.forEachIndexed { i, title ->
                 Tab(

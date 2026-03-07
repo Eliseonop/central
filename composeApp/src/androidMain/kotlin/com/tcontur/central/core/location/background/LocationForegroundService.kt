@@ -11,8 +11,9 @@ import android.graphics.Color
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
-import androidx.core.content.ContextCompat
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Granularity
 import com.google.android.gms.location.LocationCallback
@@ -22,85 +23,145 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.tcontur.central.core.location.LocationData
 import com.tcontur.central.core.location.LocationRepository
-import com.tcontur.central.core.storage.AppStorage
-import com.tcontur.central.core.storage.StorageKeys
-import com.tcontur.central.core.utils.currentFormattedTimestamp
-import com.tcontur.central.data.LocationApiService
-import com.tcontur.central.data.model.LocationRequest as LocationApiRequest
+import com.tcontur.central.core.services.SocketService
+import com.tcontur.central.core.socket.ProtoSocketManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.android.ext.android.inject
+import com.tcontur.central.core.storage.AppStorage
+import com.tcontur.central.core.storage.StorageKeys
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
-/**
- * Foreground service that uses FusedLocationProvider continuous callbacks
- * to track the inspector's GPS position.
- *
- * Every update is emitted to [LocationRepository] so that any ViewModel
- * can collect the live position without triggering a new GPS request.
- * The position is also forwarded to the API every [SEND_INTERVAL_MS] ms.
- */
+private const val TAG = "TCONTUR_GPS"
+
 class LocationForegroundService : Service() {
 
-    private val locationRepo: LocationRepository by inject()
-    private val locationApi:  LocationApiService  by inject()
-    private val storage:      AppStorage          by inject()
+    private val locationRepo:       LocationRepository by inject()
+    private val protoSocketManager: ProtoSocketManager by inject()
+    private val appStorage:         AppStorage         by inject()
 
     private lateinit var fusedClient: FusedLocationProviderClient
     private var locationCallback: LocationCallback? = null
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var lastSendTime = 0L
+    private val serviceScope       = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var lastSocketSendTime = 0L
 
     companion object {
-        private const val CHANNEL_ID      = "TID"
-        private const val NOTIFICATION_ID = 112233
-
-        /** Minimum interval between FusedLocationProvider updates. */
+        private const val CHANNEL_ID           = "TID"
+        private const val NOTIFICATION_ID      = 112233
         private const val LOCATION_INTERVAL_MS = 2_500L
-
-        /** How often the position is forwarded to the remote API. */
-        private const val SEND_INTERVAL_MS = 5_000L
-
-        /** Discard fixes worse than this accuracy (metres). */
-        private const val MIN_ACCURACY_METERS = 50f
+        private const val SEND_INTERVAL_MS     = 5_000L
+        private const val MIN_ACCURACY_METERS  = 50f
+        private const val STEP_TIMEOUT_MS      = 30_000L
     }
 
     // ─── Lifecycle ────────────────────────────────────────────────────────────
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        Log.d(TAG, "  LocationForegroundService CREADO")
+        Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification("Conectando...", Color.GRAY))
-
-        // FusedLocationProviderClient must be created on the main thread.
-        // onCreate() is always called on the main thread, so this is safe.
+        startForeground(NOTIFICATION_ID, buildNotification("🔴 Iniciando conexión...", Color.RED))
+        Log.d(TAG, "startForeground() llamado con éxito")
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
-        startLocationUpdates()
+        serviceScope.launch { runStartupSequence() }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
-        START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "onStartCommand() — intent.action=${intent?.action}")
+        return START_STICKY
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        Log.d(TAG, "LocationForegroundService DESTRUIDO")
         stopLocationUpdates()
         serviceScope.cancel()
         super.onDestroy()
     }
 
+    // ─── Startup sequence ─────────────────────────────────────────────────────
+
+    private suspend fun runStartupSequence() {
+        Log.d(TAG, "── runStartupSequence() iniciado ──")
+
+        // ── 0. Credential guard ────────────────────────────────────────────────
+        val userJson = appStorage.getString(StorageKeys.USER_JSON)
+        if (userJson.isBlank()) {
+            Log.w(TAG, "⛔ [0] Sin sesión almacenada — deteniendo servicio")
+            updateNotification("⛔ Sin sesión activa", Color.RED)
+            stopSelf()
+            return
+        }
+        Log.d(TAG, "✅ [0] Sesión almacenada encontrada")
+
+        // ── 1. Iniciando conexión ──────────────────────────────────────────────
+        Log.d(TAG, "⏳ [1] Esperando que el socket se conecte...")
+        updateNotification("🔴 Iniciando conexión...", Color.RED)
+
+        if (!protoSocketManager.isConnected.value) {
+            val connected = withTimeoutOrNull(STEP_TIMEOUT_MS) {
+                protoSocketManager.isConnected.first { it }
+            }
+            if (connected == null) {
+                Log.e(TAG, "❌ [1] Timeout esperando conexión WS (${STEP_TIMEOUT_MS / 1000}s) — deteniendo servicio")
+                stopSelf()
+                return
+            }
+        }
+        Log.d(TAG, "✅ [1] Socket conectado")
+
+        // ── 2 & 3. Socket conectado → Logueando ───────────────────────────────
+        Log.d(TAG, "⏳ [2] Esperando confirmación de login del servidor (isAuthenticated)...")
+        updateNotification("🟡 Socket conectado · Logueando...", Color.YELLOW)
+
+        if (!protoSocketManager.isAuthenticated.value) {
+            val authenticated = withTimeoutOrNull(STEP_TIMEOUT_MS) {
+                protoSocketManager.isAuthenticated.first { it }
+            }
+            if (authenticated == null) {
+                Log.e(TAG, "❌ [2] Timeout esperando confirmación de login (${STEP_TIMEOUT_MS / 1000}s) — deteniendo servicio")
+                updateNotification("⛔ Login no confirmado", Color.RED)
+                stopSelf()
+                return
+            }
+        }
+        Log.d(TAG, "✅ [2] Login confirmado por el servidor — GPS tracking habilitado")
+
+        // ── 4. Logueado ✓ ─────────────────────────────────────────────────────
+        updateNotification("🟢 Logueado ✓", Color.GREEN)
+        delay(800)
+
+        // ── 5. Iniciar GPS tracking ────────────────────────────────────────────
+        Log.d(TAG, "📍 [3] Iniciando FusedLocationProvider...")
+        withContext(Dispatchers.Main) { startLocationUpdates() }
+    }
+
     // ─── FusedLocationProvider ────────────────────────────────────────────────
 
     private fun startLocationUpdates() {
-        if (locationCallback != null) return   // already active
-        if (!hasPermission()) {
-            updateNotification("Sin permisos de ubicación", Color.RED)
-            locationRepo.setTracking(false)
+        if (locationCallback != null) {
+            Log.w(TAG, "startLocationUpdates() — ya activo, ignorado")
             return
         }
+        if (!hasPermission()) {
+            Log.e(TAG, "❌ Sin permisos de ubicación — no se puede iniciar GPS")
+            updateNotification("⛔ Sin permisos de ubicación", Color.RED)
+            return
+        }
+
+        Log.d(TAG, "📍 Registrando LocationCallback (interval=${LOCATION_INTERVAL_MS}ms, minAccuracy=${MIN_ACCURACY_METERS}m)")
 
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, LOCATION_INTERVAL_MS)
             .setMinUpdateIntervalMillis(LOCATION_INTERVAL_MS)
@@ -111,25 +172,39 @@ class LocationForegroundService : Service() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val raw = result.lastLocation ?: return
-                val data = LocationData(
-                    latitude  = raw.latitude,
-                    longitude = raw.longitude,
-                    accuracy  = raw.accuracy,
-                    timestamp = raw.time
+
+                // Always emit to repository
+                locationRepo.emit(LocationData(raw.latitude, raw.longitude, raw.accuracy, raw.time))
+
+                // Skip inaccurate fixes
+                if (raw.accuracy > MIN_ACCURACY_METERS) {
+                    Log.v(TAG, "📍 Fix ignorado — precisión insuficiente: ${raw.accuracy}m (máx ${MIN_ACCURACY_METERS}m)")
+                    return
+                }
+
+                val now = System.currentTimeMillis()
+                if (now - lastSocketSendTime < SEND_INTERVAL_MS) return
+                lastSocketSendTime = now
+
+                Log.d(TAG, "📤 Enviando posición → lat=%.6f lon=%.6f acc=%.1fm".format(
+                    raw.latitude, raw.longitude, raw.accuracy
+                ))
+
+                updateNotification(
+                    "🟢 Conectado [%.5f, %.5f]".format(raw.latitude, raw.longitude),
+                    Color.GREEN
                 )
 
-                // 1. Emit to repository — all collectors receive the update immediately
-                locationRepo.emit(data)
-
-                // 2. Skip very inaccurate fixes for the API call
-                if (raw.accuracy > MIN_ACCURACY_METERS) return
-
-                // 3. Forward to the API at most once every SEND_INTERVAL_MS
-                val now = System.currentTimeMillis()
-                if (now - lastSendTime >= SEND_INTERVAL_MS) {
-                    lastSendTime = now
-                    serviceScope.launch(Dispatchers.IO) { sendToApi(data) }
-                }
+                val dt = LocalDateTime.ofEpochSecond(now / 1000L, 0, ZoneOffset.UTC)
+                SocketService.sendMessage(
+                    context   = this@LocationForegroundService,
+                    data      = hashMapOf(
+                        "time"      to dt,
+                        "latitude"  to raw.latitude,
+                        "longitude" to raw.longitude
+                    ),
+                    formatKey = "position"
+                )
             }
         }
 
@@ -139,60 +214,44 @@ class LocationForegroundService : Service() {
                 locationCallback!!,
                 Looper.getMainLooper()
             ).addOnSuccessListener {
+                Log.d(TAG, "✅ FusedLocationProvider activo — tracking ON")
                 locationRepo.setTracking(true)
-                updateNotification("Rastreando ubicación", Color.GREEN)
-            }.addOnFailureListener {
-                locationRepo.setTracking(false)
-                updateNotification("Error al iniciar GPS", Color.RED)
+            }.addOnFailureListener { e ->
+                Log.e(TAG, "❌ Error al iniciar FusedLocationProvider: ${e.message}")
+                updateNotification("⛔ Error al iniciar GPS", Color.RED)
             }
         } catch (e: SecurityException) {
-            locationRepo.setTracking(false)
-            updateNotification("Sin permisos de ubicación", Color.RED)
+            Log.e(TAG, "❌ SecurityException al iniciar GPS: ${e.message}")
+            updateNotification("⛔ Sin permisos de ubicación", Color.RED)
         }
     }
 
     private fun stopLocationUpdates() {
         locationCallback?.let { cb ->
+            Log.d(TAG, "📍 Deteniendo FusedLocationProvider")
             fusedClient.removeLocationUpdates(cb)
             locationCallback = null
         }
         locationRepo.setTracking(false)
     }
 
-    // ─── API forwarding ───────────────────────────────────────────────────────
-
-    private suspend fun sendToApi(data: LocationData) {
-        val token = storage.getString(StorageKeys.AUTH_TOKEN)
-        val code  = storage.getString(StorageKeys.EMPRESA_CODE)
-        if (token.isBlank() || code.isBlank()) return
-
-        locationApi.sendLocation(
-            empresaCodigo = code,
-            token         = token,
-            request       = LocationApiRequest(
-                lat = data.latitude,
-                lon = data.longitude,
-                ts  = currentFormattedTimestamp()
-            )
-        )
-    }
-
-    // ─── Notification helpers ─────────────────────────────────────────────────
+    // ─── Notification ─────────────────────────────────────────────────────────
 
     private fun buildNotification(content: String, color: Int = Color.GRAY): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Inspector")
+            .setContentTitle("Inspector TCONTUR")
             .setContentText(content)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setColor(color)
             .setOngoing(true)
             .setSilent(true)
-            .setPriority(NotificationCompat.PRIORITY_MIN)
-            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setShowWhen(false)
             .build()
 
     private fun updateNotification(content: String, color: Int = Color.GRAY) {
+        Log.d(TAG, "🔔 Notificación → \"$content\"")
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID, buildNotification(content, color))
     }
@@ -201,18 +260,19 @@ class LocationForegroundService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "TCONTUR",
+                "Inspector GPS",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Rastreo GPS del inspector"
+                description          = "Estado del rastreo GPS del inspector"
                 setShowBadge(false)
                 enableLights(false)
                 enableVibration(false)
                 setSound(null, null)
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .createNotificationChannel(channel)
+            Log.d(TAG, "Canal de notificación '$CHANNEL_ID' creado")
         }
     }
 

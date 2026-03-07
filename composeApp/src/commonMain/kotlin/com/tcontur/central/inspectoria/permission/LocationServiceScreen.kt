@@ -48,7 +48,7 @@ fun LocationServiceScreen(
     val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
 
     // When the user returns from the OS GPS settings screen the lifecycle transitions
-    // back to RESUMED. If GPS is now on, pop back so InspectoriaHome can re-check.
+    // back to RESUMED. If GPS is now on, pop back to the Dashboard.
     LaunchedEffect(lifecycleState) {
         if (lifecycleState == Lifecycle.State.RESUMED && locationManager.isServiceEnabled()) {
             onServiceEnabled()

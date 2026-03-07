@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.tcontur.central.core.network.SessionEventBus
+import com.tcontur.central.core.permission.StartupPermissionsScreen
 import com.tcontur.central.data.AuthRepositoryImpl
 import com.tcontur.central.login.LoginScreen
 import com.tcontur.central.inspectoria.loading.SocketLoadingScreen
@@ -24,10 +25,9 @@ import org.koin.compose.koinInject
 fun AppNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    startDestination: Any = Splash
+    startDestination: Any = StartupPermissions  // ← permissions gate is always first
 ) {
     val authRepository: AuthRepositoryImpl = koinInject()
-
 
     LaunchedEffect(Unit) {
         SessionEventBus.unauthorized.collect {
@@ -39,11 +39,26 @@ fun AppNavHost(
     }
 
     NavHost(
-        navController = navController,
+        navController    = navController,
         startDestination = startDestination,
-        modifier = modifier
+        modifier         = modifier
     ) {
-        // Splash – determines where to navigate after checking auth state
+
+        // ── Permissions gate ──────────────────────────────────────────────────
+        // Requests POST_NOTIFICATIONS + LOCATION before anything else.
+        // If already granted (e.g. second launch), navigates to Splash in < 1 frame.
+        composable<StartupPermissions> {
+            StartupPermissionsScreen(
+                onAllGranted = {
+                    navController.navigate(Splash) {
+                        popUpTo(StartupPermissions) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ── Splash ────────────────────────────────────────────────────────────
+        // Determines where to navigate after checking auth state.
         composable<Splash> {
             SplashScreen(
                 onNavigateToLogin = {
@@ -60,7 +75,7 @@ fun AppNavHost(
             )
         }
 
-        // Login
+        // ── Login ─────────────────────────────────────────────────────────────
         composable<Login> {
             LoginScreen(
                 onLoginSuccess = { role ->
@@ -72,7 +87,8 @@ fun AppNavHost(
             )
         }
 
-        // Full-screen black loading screen – waits for WebSocket connection
+        // ── Socket Loading ────────────────────────────────────────────────────
+        // Full-screen loading – waits for WebSocket connection + login confirmation.
         composable<SocketLoading> { backStackEntry ->
             val args = backStackEntry.toRoute<SocketLoading>()
             SocketLoadingScreen(
@@ -85,7 +101,7 @@ fun AppNavHost(
             )
         }
 
-        // Inspectoria role graph
+        // ── Inspectoria role graph ─────────────────────────────────────────────
         inspectoriaNavGraph(
             navController = navController,
             onLogout = {
@@ -95,16 +111,16 @@ fun AppNavHost(
             }
         )
 
-        // Additional role graphs added here when implemented
+        // ── Other role graphs (stubs) ──────────────────────────────────────────
         composable<ConductorRoot> { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Módulo en construcción") } }
-        composable<AdminRoot> { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Módulo en construcción") } }
+        composable<AdminRoot>     { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Módulo en construcción") } }
     }
 }
 
 /** Maps a user role string to the corresponding navigation destination. */
 private fun roleDestination(role: String): Any = when (role.lowercase()) {
     "inspector", "inspectoria" -> InspectoriaRoot
-    "conductor" -> ConductorRoot
-    "admin", "administrador" -> AdminRoot
-    else -> InspectoriaRoot // safe default
+    "conductor"                -> ConductorRoot
+    "admin", "administrador"   -> AdminRoot
+    else                       -> InspectoriaRoot // safe default
 }

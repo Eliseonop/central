@@ -64,7 +64,6 @@ fun SocketLoadingScreen(
     }
 }
 
-// ── Loading ────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun LoadingContent() {
@@ -99,7 +98,6 @@ private fun LoadingContent() {
     }
 }
 
-// ── Success ────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun SuccessContent() {

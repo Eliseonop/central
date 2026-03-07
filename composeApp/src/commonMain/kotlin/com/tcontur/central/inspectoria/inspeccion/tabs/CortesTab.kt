@@ -46,8 +46,8 @@ fun CortesTab(
     }
 
     LazyColumn(
-        modifier            = Modifier.fillMaxSize(),
-        contentPadding      = PaddingValues(12.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(visible, key = { it.boletoId * 1_000_000 + it.inicio }) { corte ->
@@ -55,16 +55,16 @@ fun CortesTab(
             if (corte.terminado && !corte.mostrar) {
                 // ── Terminated card (red, with restore icon) ─────────────────
                 TerminadoCard(
-                    corte          = corte,
+                    corte = corte,
                     onReestablecer = { viewModel.reestablecerCorte(realIndex) }
                 )
             } else {
                 // ── Active card (input on the right) ─────────────────────────
                 ActiveCorteCard(
-                    corte          = corte,
-                    ticketera      = ticketera,
+                    corte = corte,
+                    ticketera = ticketera,
                     onNumeroChange = { num -> viewModel.updateCorteNumero(realIndex, num) },
-                    onTerminar     = { viewModel.terminarCorte(realIndex) }
+                    onTerminar = { viewModel.terminarCorte(realIndex) }
                 )
             }
         }
@@ -88,12 +88,12 @@ private fun ActiveCorteCard(
     val accent = parseColor(corte.color)
 
     Card(
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier          = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -104,20 +104,20 @@ private fun ActiveCorteCard(
                 // Row 1: nombre  serie  (always visible)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment     = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text       = corte.nombre,
+                        text = corte.nombre,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize   = 14.sp,
-                        color      = MaterialTheme.colorScheme.onSurface
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (corte.serie.isNotEmpty()) {
                         Text(
-                            text       = corte.serie,
+                            text = corte.serie,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize   = 14.sp,
-                            color      = accent
+                            fontSize = 14.sp,
+                            color = accent
                         )
                     }
                 }
@@ -127,67 +127,54 @@ private fun ActiveCorteCard(
                 // Row 2: tarifa  inicio–fin  (always visible)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment     = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text       = "S/ ${corte.tarifa.toDecimalStr()}",
-                        fontSize   = 22.sp,
+                        text = "S/ ${corte.tarifa.toDecimalStr()}",
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color      = accent
+                        color = accent
                     )
                     Text(
-                        text     = "${formatTicket(corte.inicio)} – ${formatTicket(corte.fin)}",
+                        text = "${formatTicket(corte.inicio)} – ${formatTicket(corte.fin)}",
                         fontSize = 11.sp,
-                        color    = Color.Gray
+                        color = Color.Gray
                     )
                 }
             }
 
             Spacer(Modifier.width(8.dp))
 
-            // ── RIGHT ─────────────────────────────────────────────────────────
             if (ticketera) {
-                // Ticketera mode: just display the current number, no input
                 Text(
-                    text       = formatTicket(corte.numero),
-                    fontSize   = 22.sp,
+                    text = formatTicket(corte.numero),
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color      = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             } else {
                 Row(
-                    verticalAlignment     = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     if (corte.quedan) {
                         IconButton(
-                            onClick  = onTerminar,
+                            onClick = onTerminar,
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                imageVector        = Icons.Default.SkipNext,
+                                imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Terminar suministro",
-                                tint               = accent
+                                tint = accent
                             )
                         }
                     }
-
-                    // Ticket number input
-                    // Key = boletoId + inicio: stable while the user is typing.
-                    // Only corte.numero changes when the user types (via onNumeroChange),
-                    // but boletoId and inicio are fixed for this supply → no mid-typing resets.
-                    // A new supply (different inicio) correctly reinitialises the field.
-                    // TextFieldValue lets us control the cursor/selection position on focus.
                     var tfv by remember(corte.boletoId, corte.inicio) {
                         val formatted = formatTicket(corte.numero)
                         mutableStateOf(TextFieldValue(formatted))
                     }
                     var isFocused by remember { mutableStateOf(false) }
 
-                    // Mirror Angular's onFocus: after 50 ms select the last 3 digits
-                    // (positions 3–6 of "000XXX") so the user types over the variable part.
-                    // We use a small delay (like Angular's setTimeout(..., 100)) so the
-                    // Android IME has finished taking control before we set the selection.
                     LaunchedEffect(isFocused) {
                         if (isFocused) {
                             delay(50)
@@ -199,7 +186,6 @@ private fun ActiveCorteCard(
 
                     fun commitValue() {
                         val num = tfv.text.toIntOrNull() ?: corte.inicio
-                        // Clamp to the valid range [inicio, fin]
                         val clamped = num.coerceIn(corte.inicio, corte.fin)
                         val formatted = formatTicket(clamped)
                         tfv = TextFieldValue(formatted, selection = TextRange(formatted.length))
@@ -207,18 +193,14 @@ private fun ActiveCorteCard(
                     }
 
                     OutlinedTextField(
-                        value         = tfv,
+                        value = tfv,
                         onValueChange = { v ->
-                            // Allow only digits, max 6 chars.
-                            // Do NOT call onNumeroChange here – calling it on every
-                            // keystroke updates corte.numero which would reset the
-                            // remember block above and wipe what the user is typing.
                             val filtered = v.text.filter { it.isDigit() }
                             if (filtered.length <= 6) {
                                 tfv = v.copy(text = filtered)
                             }
                         },
-                        modifier        = Modifier
+                        modifier = Modifier
                             .width(112.dp)
                             .onFocusChanged { fs ->
                                 if (fs.isFocused) {
@@ -228,14 +210,14 @@ private fun ActiveCorteCard(
                                     commitValue()   // format + notify ViewModel on blur
                                 }
                             },
-                        singleLine      = true,
-                        textStyle       = TextStyle(
-                            fontSize   = 20.sp,
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold
                         ),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
-                            imeAction    = ImeAction.Done
+                            imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(
                             onDone = { commitValue() }
@@ -247,91 +229,79 @@ private fun ActiveCorteCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Terminated card (red background, mirrors Angular's bg-red-200 card)
-//
-//  tarifa (large) | nombre + serie (grows) | rango | restore icon
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun TerminadoCard(
     corte: CorteItem,
     onReestablecer: () -> Unit
 ) {
     Card(
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color(0xFFFFCDD2))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFCDD2))
     ) {
         Row(
-            modifier              = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment     = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Tarifa — left, large
             Text(
-                text       = "S/ ${corte.tarifa.toDecimalStr()}",
-                fontSize   = 22.sp,
+                text = "S/ ${corte.tarifa.toDecimalStr()}",
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color      = Color(0xFFC62828)
+                color = Color(0xFFC62828)
             )
 
-            // Nombre + serie — center, grows
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text       = corte.nombre,
+                    text = corte.nombre,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize   = 14.sp,
-                    color      = Color(0xFFC62828)
+                    fontSize = 14.sp,
+                    color = Color(0xFFC62828)
                 )
                 if (corte.serie.isNotEmpty()) {
                     Text(
-                        text     = corte.serie,
+                        text = corte.serie,
                         fontSize = 12.sp,
-                        color    = Color(0xFFC62828)
+                        color = Color(0xFFC62828)
                     )
                 }
             }
 
-            // Rango — center-right
             Text(
-                text     = "${formatTicket(corte.inicio)} – ${formatTicket(corte.fin)}",
+                text = "${formatTicket(corte.inicio)} – ${formatTicket(corte.fin)}",
                 fontSize = 11.sp,
-                color    = Color(0xFFC62828)
+                color = Color(0xFFC62828)
             )
 
-            // Restore icon button — right
             IconButton(
-                onClick  = onReestablecer,
+                onClick = onReestablecer,
                 modifier = Modifier.size(36.dp)
             ) {
                 Icon(
-                    imageVector        = Icons.Default.Restore,
+                    imageVector = Icons.Default.Restore,
                     contentDescription = "Reestablecer suministro",
-                    tint               = Color(0xFFC62828)
+                    tint = Color(0xFFC62828)
                 )
             }
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 private fun formatTicket(number: Int): String =
     number.toString().padStart(6, '0')
 
 internal fun parseColor(name: String): Color = when (name.lowercase()) {
-    "red", "rojo"        -> Color(0xFFC62828)
-    "blue", "azul"       -> Color(0xFF1565C0)
-    "green", "verde"     -> Color(0xFF2E7D32)
+    "red", "rojo" -> Color(0xFFC62828)
+    "blue", "azul" -> Color(0xFF1565C0)
+    "green", "verde" -> Color(0xFF2E7D32)
     "yellow", "amarillo" -> Color(0xFFF9A825)
-    "orange", "naranja"  -> Color(0xFFE65100)
-    "purple", "morado"   -> Color(0xFF6A1B9A)
-    "pink", "rosado"     -> Color(0xFFAD1457)
-    "teal", "turquesa"   -> Color(0xFF00695C)
-    else                 -> Color(0xFF1565C0)
+    "orange", "naranja" -> Color(0xFFE65100)
+    "purple", "morado" -> Color(0xFF6A1B9A)
+    "pink", "rosado" -> Color(0xFFAD1457)
+    "teal", "turquesa" -> Color(0xFF00695C)
+    else -> Color(0xFF1565C0)
 }

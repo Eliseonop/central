@@ -8,4 +8,6 @@ class IosSocketServiceManager : SocketServiceManager {
     override fun connect(wsUrl: String) { /* TODO: iOS WebSocket */ }
     override fun disconnect() { /* TODO: iOS WebSocket */ }
     override fun send(data: HashMap<String, Any?>, formatKey: String) { /* TODO: iOS WebSocket */ }
+    override fun startLocationTracking() { /* TODO: iOS background location */ }
+    override fun stopLocationTracking() { /* TODO: iOS background location */ }
 }

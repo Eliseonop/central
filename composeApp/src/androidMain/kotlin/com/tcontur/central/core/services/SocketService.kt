@@ -6,8 +6,10 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.tcontur.Protocol
 import com.tcontur.central.core.socket.ProtoSocketManager
 import kotlinx.coroutines.CoroutineScope
@@ -39,8 +41,13 @@ import java.util.concurrent.atomic.AtomicInteger
 class SocketService : Service() {
 
     private val TAG = "SocketService"
-    private val CHANNEL_ID = "SOCKET_SERVICE_CHANNEL"
-    private val NOTIFICATION_ID = 1002
+
+    // Shared with LocationForegroundService so both foreground services show
+    // as a SINGLE notification to the user.  LocationForegroundService owns
+    // the content; SocketService only calls startForeground() as required by
+    // Android and never updates the notification text independently.
+    private val CHANNEL_ID      = "TID"
+    private val NOTIFICATION_ID = 112233
 
     private val protoSocketManager: ProtoSocketManager by inject()
 
@@ -336,28 +343,46 @@ class SocketService : Service() {
     }
 
     // ── Notification ──────────────────────────────────────────────────────────
+    // SocketService shares the notification with LocationForegroundService.
+    // It only creates the channel (idempotent) and calls startForeground() once.
+    // All content updates are done exclusively by LocationForegroundService.
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID, "Socket Service", NotificationManager.IMPORTANCE_LOW
-        ).apply { description = "Maintains WebSocket connection in background" }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val existing = getSystemService(NotificationManager::class.java)
+                .getNotificationChannel(CHANNEL_ID)
+            if (existing != null) return  // already created by LocationForegroundService
+
+            // Fallback: create the channel here in case this service starts first
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Inspector GPS",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Estado del rastreo GPS del inspector"
+                setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
+                setSound(null, null)
+            }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
     }
 
-    private fun createNotification(): Notification {
-        val status = if (protoSocketManager.isConnected.value) "🟢 Conectado" else "🔴 Desconectado"
-        return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("Socket Central $status")
-            .setContentText("Mensajes: $messageCount")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+    /** Minimal shared notification used only for startForeground(). */
+    private fun createNotification(): Notification =
+        NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Inspector TCONTUR")
+            .setContentText("🔴 Iniciando conexión...")
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setShowWhen(false)
             .build()
-    }
 
-    private fun updateNotification() {
-        val nm = getSystemService(NotificationManager::class.java)
-        nm?.notify(NOTIFICATION_ID, createNotification())
-    }
+    /** No-op: LocationForegroundService is the sole owner of notification content. */
+    private fun updateNotification() = Unit
 
     // ── Companion ─────────────────────────────────────────────────────────────
 

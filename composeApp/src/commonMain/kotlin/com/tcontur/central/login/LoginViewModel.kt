@@ -44,16 +44,14 @@ class LoginViewModel(
     val events: SharedFlow<LoginEvent> = _events
 
     init {
-        loadSavedCredentials()
         fetchEmpresas()
     }
 
-    fun onUsernameChange(value: String)  = _uiState.update { it.copy(username = value) }
-    fun onPasswordChange(value: String)  = _uiState.update { it.copy(password = value) }
+    fun onUsernameChange(value: String)    = _uiState.update { it.copy(username = value) }
+    fun onPasswordChange(value: String)    = _uiState.update { it.copy(password = value) }
     fun onRememberMeChange(value: Boolean) = _uiState.update { it.copy(rememberMe = value) }
-    fun onEmpresaSelected(index: Int) =
-        _uiState.update { it.copy(selectedEmpresa = it.empresas.getOrNull(index)) }
-    fun clearError() = _uiState.update { it.copy(errorMessage = null) }
+    fun onEmpresaSelected(index: Int)      = _uiState.update { it.copy(selectedEmpresa = it.empresas.getOrNull(index)) }
+    fun clearError()                       = _uiState.update { it.copy(errorMessage = null) }
 
     fun login() {
         val s = _uiState.value
@@ -66,10 +64,8 @@ class LoginViewModel(
             when (val result = auth.login(empresa.codigo, s.username, s.password)) {
                 is ApiResult.Success -> {
                     storage.putString(StorageKeys.EMPRESA_ID, empresa.id.toString())
-                    if (s.rememberMe) {
-                        storage.putBoolean(StorageKeys.REMEMBER_ME, true)
-                        storage.putString(StorageKeys.SAVED_USERNAME, s.username)
-                    }
+                    if (s.rememberMe) saveCredentials(empresa, s.username, s.password)
+                    else clearSavedCredentials()
                     _events.emit(LoginEvent.LoginSuccess(result.data))
                 }
                 is ApiResult.Error -> _uiState.update { it.copy(isLoggingIn = false, errorMessage = result.message) }
@@ -78,25 +74,45 @@ class LoginViewModel(
         }
     }
 
+    private fun saveCredentials(empresa: Empresa, username: String, password: String) {
+        storage.putBoolean(StorageKeys.REMEMBER_ME, true)
+        storage.putString(StorageKeys.SAVED_USERNAME, username)
+//        storage.putString(StorageKeys.SAVED_PASSWORD, password)
+        storage.putString(StorageKeys.SAVED_EMPRESA_ID, empresa.id.toString())
+    }
+
+    private fun clearSavedCredentials() {
+        storage.putBoolean(StorageKeys.REMEMBER_ME, false)
+        storage.remove(StorageKeys.SAVED_USERNAME)
+        storage.remove(StorageKeys.SAVED_PASSWORD)
+        storage.remove(StorageKeys.SAVED_EMPRESA_ID)
+    }
+
+    private fun loadSavedCredentials(empresas: List<Empresa>) {
+        if (!storage.getBoolean(StorageKeys.REMEMBER_ME)) return
+        val savedEmpresaId = storage.getString(StorageKeys.SAVED_EMPRESA_ID).toIntOrNull()
+        _uiState.update {
+            it.copy(
+                username        = storage.getString(StorageKeys.SAVED_USERNAME),
+                password        = storage.getString(StorageKeys.SAVED_PASSWORD),
+                rememberMe      = true,
+                selectedEmpresa = empresas.find { e -> e.id == savedEmpresaId }
+            )
+        }
+    }
+
     private fun fetchEmpresas() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingEmpresas = true) }
             when (val result = empresaApi.fetchEmpresas()) {
-                is ApiResult.Success -> _uiState.update {
-                    it.copy(
-                        empresas = result.data.map { e -> Empresa(e.id, e.codigo, e.nombre) },
-                        isLoadingEmpresas = false
-                    )
+                is ApiResult.Success -> {
+                    val empresas = result.data.map { e -> Empresa(e.id, e.codigo, e.nombre) }
+                    _uiState.update { it.copy(empresas = empresas, isLoadingEmpresas = false) }
+                    loadSavedCredentials(empresas)
                 }
                 is ApiResult.Error -> _uiState.update { it.copy(isLoadingEmpresas = false, errorMessage = result.message) }
                 ApiResult.Loading  -> Unit
             }
-        }
-    }
-
-    private fun loadSavedCredentials() {
-        if (storage.getBoolean(StorageKeys.REMEMBER_ME)) {
-            _uiState.update { it.copy(username = storage.getString(StorageKeys.SAVED_USERNAME), rememberMe = true) }
         }
     }
 }

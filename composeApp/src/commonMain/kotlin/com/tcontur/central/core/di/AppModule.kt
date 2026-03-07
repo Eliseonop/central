@@ -12,7 +12,6 @@ import com.tcontur.central.data.EmpresaApiService
 import com.tcontur.central.data.InspeccionApiService
 import com.tcontur.central.data.LocationApiService
 import com.tcontur.central.inspectoria.dashboard.InspectoriaDashboardViewModel
-import com.tcontur.central.inspectoria.home.InspectoriaHomeViewModel
 import com.tcontur.central.inspectoria.iniciar.IniciarInspeccionViewModel
 import com.tcontur.central.inspectoria.inspeccion.InspeccionViewModel
 import com.tcontur.central.inspectoria.loading.SocketLoadingViewModel
@@ -36,7 +35,6 @@ val appModule = module {
     viewModel { SplashViewModel(get()) }
     viewModel { LoginViewModel(get(), get(), get()) }
     viewModel { SocketLoadingViewModel(get(), get(), get(), get(), get()) }
-    viewModel { InspectoriaHomeViewModel(get(), get(), get(), get()) }
     viewModel { InspectoriaDashboardViewModel(get(), get(), get(), get(), get()) }
     viewModel { IniciarInspeccionViewModel(get(), get(), get(), get(), get()) }
     viewModel { InspeccionViewModel(get(), get(), get(), get(), get()) }

@@ -61,18 +61,15 @@ class InspeccionViewModel(
             val token = storage.getString(StorageKeys.AUTH_TOKEN)
             val code  = storage.getString(StorageKeys.EMPRESA_CODE)
 
-            // ── QR path: use cortes from QR scan if available ─────────────────
             val qrCortes = qrDataHolder.qrCortes
             qrDataHolder.clear()   // consume once
 
-            // Fetch the active inspection
             val inspResult = inspeccionApi.verInspeccion(code, token)
             if (inspResult is ApiResult.Success && inspResult.data != null) {
                 val dto  = inspResult.data
                 val insp = dto.toDomain()
 
                 val cortes: List<CorteItem> = if (qrCortes != null) {
-                    // ── QR mode: cortes come from the QR payload (ticketera) ───
                     qrCortes.map { qrc ->
                         CorteItem(
                             boletoId       = qrc.boletoId,
@@ -90,7 +87,6 @@ class InspeccionViewModel(
                         )
                     }
                 } else {
-                    // ── Normal mode: fetch suministros by UNIT id ─────────────
                     // GET /api/suministros?unidad={unidadId}
                     val suministrosResult = inspeccionApi.getSuministros(code, token, insp.unidadId)
                     val suministros = if (suministrosResult is ApiResult.Success) suministrosResult.data else emptyList()

@@ -117,6 +117,7 @@ class InspectoriaDashboardViewModel(
 
     fun logout() {
         viewModelScope.launch {
+            socketServiceManager.stopLocationTracking()
             socketServiceManager.disconnect()
             auth.logout()
             _events.value = InspectoriaDashboardEvent.LoggedOut

@@ -37,12 +37,12 @@ fun InspeccionScreen(
             is InspeccionEvent.Finalized, is InspeccionEvent.Cancelled -> {
                 viewModel.consumeEvent(); onFinished()
             }
+
             null -> Unit
         }
     }
 
-    val insp      = state.inspeccion
-    // 3 primary tabs: Cortes | Cobros (→ Reintegros + Pasajeros sub-tabs) | Ocurrencias
+    val insp = state.inspeccion
     val tabTitles = listOf("Cortes", "Cobros", "Ocurrencias")
 
     Box(Modifier.fillMaxSize()) {
@@ -53,7 +53,7 @@ fun InspeccionScreen(
                         Text(
                             if (insp != null) "Insp. PAD ${insp.padron ?: "?"} (${insp.placa ?: "?"})"
                             else "Inspección",
-                            color    = Color.White,
+                            color = Color.White,
                             fontSize = 16.sp
                         )
                     },
@@ -76,23 +76,24 @@ fun InspeccionScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())
+                    .padding(
+                        top = padding.calculateTopPadding(),
+                        bottom = padding.calculateBottomPadding()
+                    )
             ) {
-                // ── Primary tabs: Cortes | Cobros | Ocurrencias ───────────────
                 TabRow(selectedTabIndex = state.selectedTab) {
                     tabTitles.forEachIndexed { i, title ->
                         Tab(
                             selected = state.selectedTab == i,
-                            onClick  = { viewModel.selectTab(i) },
-                            text     = { Text(title, fontSize = 13.sp) }
+                            onClick = { viewModel.selectTab(i) },
+                            text = { Text(title, fontSize = 13.sp) }
                         )
                     }
                 }
 
-                // ── Error snackbar ────────────────────────────────────────────
                 state.error?.let { err ->
                     Snackbar(
-                        modifier      = Modifier.padding(8.dp),
+                        modifier = Modifier.padding(8.dp),
                         dismissAction = { TextButton(onClick = viewModel::clearError) { Text("OK") } }
                     ) { Text(err) }
                 }
@@ -100,10 +101,11 @@ fun InspeccionScreen(
                 // ── Tab content ───────────────────────────────────────────────
                 when (state.selectedTab) {
                     0 -> CortesTab(
-                        cortes    = state.cortes,
+                        cortes = state.cortes,
                         ticketera = insp?.ticketera ?: false,
                         viewModel = viewModel
                     )
+
                     1 -> CobrosTab(state = state, viewModel = viewModel)
                     2 -> OcurrenciasTab(state = state, viewModel = viewModel)
                 }
@@ -113,7 +115,6 @@ fun InspeccionScreen(
         if (state.isLoading) LoadingOverlay()
     }
 
-    // ── Cancel dialog ─────────────────────────────────────────────────────────
     if (state.showCancelDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showCancelDialog(false) },
@@ -122,18 +123,18 @@ fun InspeccionScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Indica el motivo de cancelación:")
                     OutlinedTextField(
-                        value         = state.cancelMotivo,
+                        value = state.cancelMotivo,
                         onValueChange = viewModel::setCancelMotivo,
-                        label         = { Text("Motivo") },
-                        modifier      = Modifier.fillMaxWidth(),
-                        minLines      = 2
+                        label = { Text("Motivo") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2
                     )
                 }
             },
             confirmButton = {
                 TextButton(
-                    onClick  = viewModel::cancelar,
-                    enabled  = state.cancelMotivo.isNotBlank()
+                    onClick = viewModel::cancelar,
+                    enabled = state.cancelMotivo.isNotBlank()
                 ) { Text("Cancelar inspección", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
@@ -142,12 +143,11 @@ fun InspeccionScreen(
         )
     }
 
-    // ── Finalize dialog ───────────────────────────────────────────────────────
     if (state.showFinalizeDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showFinalizeDialog(false) },
             title = { Text("Finalizar Inspección") },
-            text  = { Text("¿Confirmas la finalización de esta inspección? Se registrarán los datos actuales.") },
+            text = { Text("¿Confirmas la finalización de esta inspección? Se registrarán los datos actuales.") },
             confirmButton = {
                 TextButton(onClick = viewModel::finalizar) {
                     Text("Finalizar", fontWeight = FontWeight.SemiBold)
@@ -169,15 +169,11 @@ private fun InspeccionBottomBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                // Consume navigation-bar insets so Cancelar / Finalizar buttons
-                // always appear above the system nav bar (gesture strip, 3-button
-                // bar on Android, home indicator on iOS).
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = 12.dp, vertical = 12.dp)
         ) {
-            // Totals row
             Row(
-                modifier              = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 TotalChip(
@@ -198,27 +194,37 @@ private fun InspeccionBottomBar(
 
             // Action buttons
             Row(
-                modifier              = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick  = { viewModel.showCancelDialog(true) },
+                    onClick = { viewModel.showCancelDialog(true) },
                     modifier = Modifier.weight(1f).height(44.dp),
-                    shape    = RoundedCornerShape(10.dp),
-                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("Cancelar", fontSize = 14.sp)
                 }
 
                 Button(
-                    onClick  = { viewModel.showFinalizeDialog(true) },
+                    onClick = { viewModel.showFinalizeDialog(true) },
                     modifier = Modifier.weight(2f).height(44.dp),
-                    shape    = RoundedCornerShape(10.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.White
+                    )
                     Spacer(Modifier.width(6.dp))
-                    Text("Finalizar", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    Text(
+                        "Finalizar",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
                 }
             }
         }
@@ -235,10 +241,10 @@ private fun TotalChip(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, fontSize = 11.sp, color = Color.Gray)
         Text(
-            text       = "$count  |  S/ ${monto.toDecimalStr()}",
-            fontSize   = 13.sp,
+            text = "$count  |  S/ ${monto.toDecimalStr()}",
+            fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
-            color      = color
+            color = color
         )
     }
 }

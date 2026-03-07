@@ -9,4 +9,7 @@ object StorageKeys {
     const val AUTH_TOKEN   = "authToken"
     const val EMPRESA_CODE = "empresaCodigo"
     const val EMPRESA_ID   = "empresaId"
+    const val SAVED_PASSWORD = "savedPassword"
+    const val SAVED_EMPRESA_ID = "savedEmpresaId"
+
 }
