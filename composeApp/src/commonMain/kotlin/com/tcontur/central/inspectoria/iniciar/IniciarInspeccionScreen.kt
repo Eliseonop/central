@@ -1,5 +1,6 @@
 package com.tcontur.central.inspectoria.iniciar
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -30,16 +31,13 @@ import androidx.compose.ui.unit.dp
 import com.tcontur.central.inspectoria.iniciar.qr.QrScannerView
 import org.koin.compose.viewmodel.koinViewModel
 
-// ── Paleta pastel de botones de navegación ────────────────────────────────────
-private val BtnScanBg     = Color(0xFFDCEEFB)
-private val BtnScanFg     = Color(0xFF1565C0)
-private val BtnScanBgOff  = Color(0xFFF0F4F8)
-private val BtnScanFgOff  = Color(0xFF90A4AE)
+// ── Paleta pastel claro ────────────────────────────────────────────────────────
+private val BtnScanBg   = Color(0xFFDCEEFB) ; private val BtnScanFg   = Color(0xFF1565C0)
+private val BtnMapaBg   = Color(0xFFE8F5E9) ; private val BtnMapaFg   = Color(0xFF2E7D32)
+private val BtnOffBg    = Color(0xFFF0F4F8) ; private val BtnOffFg    = Color(0xFF90A4AE)
 
-private val BtnMapaBg     = Color(0xFFE8F5E9)
-private val BtnMapaFg     = Color(0xFF2E7D32)
-private val BtnMapaBgOff  = Color(0xFFF0F4F8)
-private val BtnMapaFgOff  = Color(0xFF90A4AE)
+private val GreenBg = Color(0xFFE8F5E9)   ; private val GreenFg = Color(0xFF2E7D32)
+private val QrCardBg = Color(0xFFDCEEFB)
 
 @Composable
 fun IniciarInspeccionScreen(
@@ -64,7 +62,7 @@ fun IniciarInspeccionScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()          // espacio bajo la barra de estado
+            .statusBarsPadding()
     ) {
 
         // ── Header ─────────────────────────────────────────────────────────────
@@ -78,13 +76,12 @@ fun IniciarInspeccionScreen(
             verticalAlignment     = Alignment.CenterVertically
         ) {
             Text(
-                text       = tabTitle,
+                tabTitle,
                 style      = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color      = MaterialTheme.colorScheme.onBackground
             )
-
-            // Botón circular de retroceso
+            // Botón retroceso circular
             Box(
                 modifier         = Modifier
                     .size(42.dp)
@@ -94,15 +91,14 @@ fun IniciarInspeccionScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
-                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier           = Modifier.size(20.dp)
+                    Icons.AutoMirrored.Filled.ArrowBack, "Volver",
+                    tint     = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
 
         // ── Error ──────────────────────────────────────────────────────────────
         state.error?.let { err ->
@@ -112,7 +108,7 @@ fun IniciarInspeccionScreen(
             ) { Text(err) }
         }
 
-        // ── Contenido de la vista activa ───────────────────────────────────────
+        // ── Contenido activo ───────────────────────────────────────────────────
         Box(modifier = Modifier.weight(1f)) {
             when (state.selectedTab) {
                 0    -> FormularioTab(state, viewModel)
@@ -122,50 +118,59 @@ fun IniciarInspeccionScreen(
         }
 
         // ── Barra de navegación inferior ───────────────────────────────────────
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
 
         Row(
             modifier              = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 14.dp)
-                .navigationBarsPadding(),  // espacio sobre la barra de navegación del sistema
+                .padding(horizontal = 20.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val scanActive = state.selectedTab == 1
             val mapaActive = state.selectedTab == 2
 
-            // Botón Scan / QR
+            // Scan
             Button(
                 onClick   = { viewModel.selectTab(1) },
                 modifier  = Modifier.weight(1f).height(52.dp),
                 shape     = RoundedCornerShape(14.dp),
                 colors    = ButtonDefaults.buttonColors(
-                    containerColor = if (scanActive) BtnScanBg else BtnScanBgOff,
-                    contentColor   = if (scanActive) BtnScanFg else BtnScanFgOff
+                    containerColor = if (scanActive) BtnScanBg else BtnOffBg,
+                    contentColor   = if (scanActive) BtnScanFg else BtnOffFg
                 ),
-                elevation = ButtonDefaults.buttonElevation(0.dp)
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = if (scanActive) 4.dp else 0.dp,
+                    pressedElevation = 1.dp
+                )
             ) {
                 Icon(Icons.Default.QrCodeScanner, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Scan", fontWeight = if (scanActive) FontWeight.SemiBold else FontWeight.Normal)
+                Text("Scan",
+                    fontWeight = if (scanActive) FontWeight.SemiBold else FontWeight.Normal)
             }
 
-            // Botón Mapa
+            // Mapa
             Button(
                 onClick   = { viewModel.selectTab(2) },
                 modifier  = Modifier.weight(1f).height(52.dp),
                 shape     = RoundedCornerShape(14.dp),
                 colors    = ButtonDefaults.buttonColors(
-                    containerColor = if (mapaActive) BtnMapaBg else BtnMapaBgOff,
-                    contentColor   = if (mapaActive) BtnMapaFg else BtnMapaFgOff
+                    containerColor = if (mapaActive) BtnMapaBg else BtnOffBg,
+                    contentColor   = if (mapaActive) BtnMapaFg else BtnOffFg
                 ),
-                elevation = ButtonDefaults.buttonElevation(0.dp)
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = if (mapaActive) 4.dp else 0.dp,
+                    pressedElevation = 1.dp
+                )
             ) {
                 Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Mapa", fontWeight = if (mapaActive) FontWeight.SemiBold else FontWeight.Normal)
+                Text("Mapa",
+                    fontWeight = if (mapaActive) FontWeight.SemiBold else FontWeight.Normal)
             }
         }
+
+        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }
 
@@ -197,37 +202,32 @@ private fun FormularioTab(
                 label         = { Text("Buscar unidad") },
                 placeholder   = { Text("Ej: 1023, Troncal 5…") },
                 singleLine    = true,
-                keyboardOptions  = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier      = Modifier.fillMaxWidth(),
                 trailingIcon  = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = {
                             query = ""; showList = false; viewModel.onUnidadQueryChange("")
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = null)
-                        }
+                        }) { Icon(Icons.Default.Close, null) }
                     }
                 }
             )
 
             if (showList && filtered.isNotEmpty()) {
                 Card(
-                    modifier  = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 240.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
+                    modifier  = Modifier.fillMaxWidth().heightIn(max = 240.dp),
+                    shape     = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(6.dp)
                 ) {
                     LazyColumn {
                         items(filtered) { option ->
                             ListItem(
                                 headlineContent = { Text(option.displayText) },
-                                modifier        = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        query    = option.displayText
-                                        showList = false
-                                        viewModel.selectUnidad(option)
-                                    }
+                                modifier        = Modifier.fillMaxWidth().clickable {
+                                    query = option.displayText
+                                    showList = false
+                                    viewModel.selectUnidad(option)
+                                }
                             )
                             HorizontalDivider()
                         }
@@ -238,24 +238,23 @@ private fun FormularioTab(
 
         ProximityIndicator(state)
 
-        // Crear inspección cuando unidad seleccionada
+        // Botón crear inspección
         if (state.selectedUnidad != null || state.isCreating) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Button(
-                onClick  = viewModel::crear,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape    = RoundedCornerShape(14.dp),
-                enabled  = state.selectedUnidad != null && !state.isCreating,
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                onClick   = viewModel::crear,
+                modifier  = Modifier.fillMaxWidth().height(52.dp),
+                shape     = RoundedCornerShape(14.dp),
+                enabled   = state.selectedUnidad != null && !state.isCreating,
+                colors    = ButtonDefaults.buttonColors(
+                    containerColor = BtnScanBg,
+                    contentColor   = BtnScanFg
+                ),
+                elevation = ButtonDefaults.buttonElevation(4.dp)
             ) {
                 if (state.isCreating) {
                     CircularProgressIndicator(
-                        color       = MaterialTheme.colorScheme.onPrimary,
-                        modifier    = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
+                        color = BtnScanFg, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
                     Text("Crear Inspección", fontWeight = FontWeight.SemiBold)
                 }
@@ -274,19 +273,18 @@ private fun ProximityIndicator(state: IniciarInspeccionState) {
             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
             Text("Verificando cercanía…",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f))
         }
         ProximityStatus.VALID -> Row(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(Icons.Default.CheckCircle, null,
-                tint = Color(0xFF2E7D32), modifier = Modifier.size(20.dp))
+                tint = GreenFg, modifier = Modifier.size(20.dp))
             Column {
                 Text("Unidad cercana detectada",
                     style      = MaterialTheme.typography.bodySmall,
-                    color      = Color(0xFF2E7D32),
-                    fontWeight = FontWeight.Medium)
+                    fontWeight = FontWeight.Medium, color = GreenFg)
                 state.subidaNombre?.let {
                     Text("Paradero: $it",
                         style = MaterialTheme.typography.bodySmall,
@@ -316,7 +314,6 @@ private fun QrTab(
     viewModel: IniciarInspeccionViewModel
 ) {
     if (state.qrData == null) {
-        // ── Scanner activo ──────────────────────────────────────────────────────
         Box(modifier = Modifier.fillMaxSize()) {
             key(state.qrScanKey) {
                 QrScannerView(
@@ -332,15 +329,11 @@ private fun QrTab(
                     .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Text(
-                    "Apunta la cámara al código QR del conductor",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text("Apunta la cámara al código QR del conductor",
+                    color = Color.White, style = MaterialTheme.typography.bodySmall)
             }
         }
     } else {
-        // ── Resultado del escaneo ───────────────────────────────────────────────
         val qr = state.qrData
         Column(
             modifier              = Modifier
@@ -353,63 +346,57 @@ private fun QrTab(
             // Icono de éxito
             Box(
                 modifier         = Modifier
-                    .size(64.dp)
+                    .size(68.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE8F5E9)),
+                    .background(GreenBg),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.QrCodeScanner, null,
-                    tint = Color(0xFF2E7D32), modifier = Modifier.size(36.dp))
+                    tint = GreenFg, modifier = Modifier.size(36.dp))
             }
 
-            Text(
-                text       = "QR escaneado",
+            Text("QR escaneado",
                 style      = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color      = Color(0xFF2E7D32)
-            )
+                fontWeight = FontWeight.Bold, color = GreenFg)
 
-            // Card de datos del QR
+            // Card de datos – layout horizontal: ícono | datos | espacio
             Card(
                 modifier  = Modifier.fillMaxWidth(),
                 shape     = RoundedCornerShape(16.dp),
-                colors    = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(0.dp)
+                colors    = CardDefaults.cardColors(containerColor = QrCardBg),
+                elevation = CardDefaults.cardElevation(6.dp)
             ) {
                 Column(
                     modifier            = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     QrInfoRow("Unidad",     qr.unidad.toString())
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
                     QrInfoRow("Subida",     qr.subida.toString())
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
                     QrInfoRow("Salida",     qr.salida.toString())
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
                     QrInfoRow("Versión QR", "v${qr.version}")
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
                     QrInfoRow("Cortes",     "${qr.cortes.size} boleto(s)")
                 }
             }
 
-            // Botón Crear Inspección
+            // Botón crear
             Button(
-                onClick  = viewModel::crear,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape    = RoundedCornerShape(14.dp),
-                enabled  = !state.isCreating,
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                onClick   = viewModel::crear,
+                modifier  = Modifier.fillMaxWidth().height(52.dp),
+                shape     = RoundedCornerShape(14.dp),
+                enabled   = !state.isCreating,
+                colors    = ButtonDefaults.buttonColors(
+                    containerColor = BtnScanBg,
+                    contentColor   = BtnScanFg
+                ),
+                elevation = ButtonDefaults.buttonElevation(4.dp)
             ) {
                 if (state.isCreating) {
                     CircularProgressIndicator(
-                        color       = MaterialTheme.colorScheme.onPrimary,
-                        modifier    = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
+                        color = BtnScanFg, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
                     Text("Crear Inspección", fontWeight = FontWeight.SemiBold)
                 }
@@ -457,10 +444,8 @@ private fun MapaTab() {
         Card(
             modifier  = Modifier.fillMaxSize(),
             shape     = RoundedCornerShape(20.dp),
-            colors    = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8F5E9)
-            ),
-            elevation = CardDefaults.cardElevation(0.dp)
+            colors    = CardDefaults.cardColors(containerColor = BtnMapaBg),
+            elevation = CardDefaults.cardElevation(6.dp)
         ) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(
@@ -471,15 +456,15 @@ private fun MapaTab() {
                         modifier         = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF2E7D32).copy(alpha = 0.12f)),
+                            .background(BtnMapaFg.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.LocationOn, null,
-                            tint = Color(0xFF2E7D32), modifier = Modifier.size(36.dp))
+                            tint = BtnMapaFg, modifier = Modifier.size(36.dp))
                     }
                     Text("Próximamente",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF2E7D32).copy(alpha = 0.6f))
+                        color = BtnMapaFg.copy(alpha = 0.6f))
                 }
             }
         }
