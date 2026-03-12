@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tcontur.central.inspectoria.inspeccion.tabs.*
 import com.tcontur.central.ui.components.LoadingOverlay
+import com.tcontur.central.ui.theme.BtnGreenBg
+import com.tcontur.central.ui.theme.BtnGreenFg
 import com.tcontur.central.ui.theme.TconturAppBar
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -210,20 +212,18 @@ private fun InspeccionBottomBar(
                     onClick = { viewModel.showFinalizeDialog(true) },
                     modifier = Modifier.weight(2f).height(44.dp),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))
+                    colors = ButtonDefaults.buttonColors(containerColor = BtnGreenBg, contentColor = BtnGreenFg)
                 ) {
                     Icon(
                         Icons.Default.CheckCircle,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = Color.White
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         "Finalizar",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }

@@ -5,12 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.tcontur.central.core.QrDataHolder
 import com.tcontur.central.core.location.LocationManager
 import com.tcontur.central.core.network.ApiResult
+import com.tcontur.central.core.socket.SocketServiceManager
+import com.tcontur.central.core.socket.SocketSessionRepository
+import com.tcontur.central.core.socket.models.ProtoCheckQr
 import com.tcontur.central.core.storage.AppStorage
 import com.tcontur.central.core.storage.StorageKeys
 import com.tcontur.central.data.AuthRepositoryImpl
 import com.tcontur.central.data.InspeccionApiService
 import com.tcontur.central.data.model.PosDto
 import com.tcontur.central.domain.inspectoria.UnidadOption
+import com.tcontur.central.inspectoria.iniciar.qr.QrCorte
 import com.tcontur.central.inspectoria.iniciar.qr.QrData
 import com.tcontur.central.inspectoria.iniciar.qr.QrError
 import com.tcontur.central.inspectoria.iniciar.qr.QrParser
@@ -36,8 +40,9 @@ data class IniciarInspeccionState(
     val unidadQuery: String = "",
     val filteredUnidades: List<UnidadOption> = emptyList(),
     // ── QR tab ────────────────────────────────────────────────────────────────
-    val qrData: QrData? = null,     // non-null = scan succeeded
-    val qrScanKey: Int = 0,         // increment to remount scanner
+    val qrData: QrData? = null,           // non-null = QR escaneado OK
+    val checkQrData: ProtoCheckQr? = null, // non-null = servidor respondió check_qr
+    val qrScanKey: Int = 0,               // increment to remount scanner
     // ── Shared ────────────────────────────────────────────────────────────────
     val isCreating: Boolean = false,
     val error: String? = null
@@ -49,11 +54,13 @@ sealed class IniciarEvent {
 }
 
 class IniciarInspeccionViewModel(
-    private val auth:           AuthRepositoryImpl,
-    private val storage:        AppStorage,
-    private val inspeccionApi:  InspeccionApiService,
-    private val locationManager: LocationManager,
-    private val qrDataHolder:   QrDataHolder
+    private val auth:                  AuthRepositoryImpl,
+    private val storage:               AppStorage,
+    private val inspeccionApi:         InspeccionApiService,
+    private val locationManager:       LocationManager,
+    private val qrDataHolder:          QrDataHolder,
+    private val socketServiceManager:  SocketServiceManager,
+    private val socketSessionRepository: SocketSessionRepository
 ) : ViewModel() {
 
     private val _state  = MutableStateFlow(IniciarInspeccionState())
@@ -62,12 +69,14 @@ class IniciarInspeccionViewModel(
     private val _events = MutableStateFlow<IniciarEvent?>(null)
     val events: StateFlow<IniciarEvent?> = _events
 
-    init { loadUnidades() }
+    init {
+        loadUnidades()
+        observeCheckQr()
+    }
 
     fun selectTab(index: Int) = _state.update { it.copy(selectedTab = index) }
 
     // ── Formulario ────────────────────────────────────────────────────────────
-
 
     fun onUnidadQueryChange(query: String) {
         _state.update {
@@ -92,6 +101,7 @@ class IniciarInspeccionViewModel(
         }
         validateProximity(option)
     }
+
     fun setTicketera(value: Boolean) = _state.update { it.copy(ticketera = value) }
 
     fun clearError() = _state.update { it.copy(error = null) }
@@ -112,11 +122,42 @@ class IniciarInspeccionViewModel(
             _state.update { it.copy(error = "QR con formato inválido") }
             return
         }
-        _state.update { it.copy(qrData = data) }
+        // Store QR data and clear any previous check_qr response
+        _state.update { it.copy(qrData = data, checkQrData = null) }
+        sendCheckQr(data)
+    }
+
+    private fun sendCheckQr(qr: QrData) {
+        viewModelScope.launch {
+            println("QR_SCAN 📤 check_qr — inspector=${qr.inspector} pin=${qr.pin} vehicle=${qr.vehicle}")
+            socketServiceManager.send(
+                data = hashMapOf(
+                    "inspector" to qr.inspector,
+                    "pin"       to qr.pin,
+                    "vehicle"   to qr.vehicle
+                ),
+                formatKey = "check_qr"
+            )
+        }
+    }
+
+    /** Observe server response to check_qr and update state. */
+
+    private fun observeCheckQr() {
+        viewModelScope.launch {
+            socketSessionRepository.checkQrData.collect { proto ->
+                proto ?: return@collect
+                if (_state.value.qrData == null) return@collect // ignorar respuesta huérfana
+                _state.update { it.copy(checkQrData = proto) }
+            }
+        }
     }
 
     /** Reset the scanner to allow re-scanning. */
-    fun resetQrScan() = _state.update { it.copy(qrData = null, qrScanKey = it.qrScanKey + 1) }
+    fun resetQrScan() = _state.update {
+        socketSessionRepository.clearCheckQr()
+        it.copy(qrData = null, checkQrData = null, qrScanKey = it.qrScanKey + 1)
+    }
 
     // ── Crear ─────────────────────────────────────────────────────────────────
 
@@ -127,19 +168,29 @@ class IniciarInspeccionViewModel(
             val token = storage.getString(StorageKeys.AUTH_TOKEN)
             val code  = storage.getString(StorageKeys.EMPRESA_CODE)
 
-            // ── QR path ───────────────────────────────────────────────────────
-            val qr = s.qrData
-            if (qr != null) {
-                // Store cortes so InspeccionViewModel can pick them up
-                qrDataHolder.qrCortes = qr.cortes
+            // ── QR path — needs both qrData (vehicle) + checkQrData (busstop/pos/tickets) ──
 
-                when (val r = inspeccionApi.iniciarInspeccion(
-                    code, token,
-                    unidadId  = qr.unidad,
-                    subidaId  = qr.subida,
-                    subidaPos = PosDto(qr.subidaLat, qr.subidaLng),
-                    ticketera = true
-                )) {
+            val qr      = s.qrData
+            val checkQr = s.checkQrData
+
+            if (qr != null && checkQr == null) {
+                _state.update { it.copy(isCreating = false, error = "Esperando verificación del servidor…") }
+                return@launch
+            }
+
+            if (qr != null && checkQr != null) {
+                val inspeccionId = checkQr.inspeccion
+                if (inspeccionId == null) {
+                    _state.update { it.copy(isCreating = false, error = "El servidor no devolvió una inspección activa") }
+                    return@launch
+                }
+
+                val cortes = checkQr.tickets.map { t ->
+                    QrCorte(boletoId = t.fare ?: 0, inicio = 0, fin = (t.correlative ?: 0L).toInt())
+                }
+                qrDataHolder.qrCortes = cortes
+
+                when (val r = inspeccionApi.getInspeccionById(code, token, inspeccionId)) {
                     is ApiResult.Success -> {
                         _state.update { it.copy(isCreating = false) }
                         _events.value = IniciarEvent.InspeccionCreada(r.data.id)
@@ -147,10 +198,15 @@ class IniciarInspeccionViewModel(
                     is ApiResult.Error -> {
                         qrDataHolder.clear()
                         _state.update { it.copy(isCreating = false, error = r.message) }
-                        _events.value = IniciarEvent.Error(r.message)
                     }
                     else -> _state.update { it.copy(isCreating = false) }
                 }
+                return@launch
+            }
+
+            // ── QR scanned but still waiting for server response ──────────────
+            if (qr != null && checkQr == null) {
+                _state.update { it.copy(isCreating = false, error = "Esperando verificación del servidor…") }
                 return@launch
             }
 

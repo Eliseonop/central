@@ -6,10 +6,13 @@ import com.tcontur.central.core.location.LocationManager
 import com.tcontur.central.core.location.background.BackgroundServiceManager
 import com.tcontur.central.core.socket.AndroidSocketServiceManager
 import com.tcontur.central.core.socket.SocketServiceManager
+import com.tcontur.central.inspectoria.map.OSMMapViewModel
+import org.koin.compose.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 fun androidModule(context: Context) = module {
     single<LocationManager> { AndroidLocationManager(context) }
     single { BackgroundServiceManager(context) }
     single<SocketServiceManager> { AndroidSocketServiceManager(context) }
+    viewModel { OSMMapViewModel(get(), get(), get()) }
 }

@@ -1,0 +1,19 @@
+
+
+CREATE TABLE QrCorteEntity (
+inspeccion_id INTEGER NOT NULL,
+boleto_id     INTEGER NOT NULL,
+inicio        INTEGER NOT NULL,
+fin           INTEGER NOT NULL,
+PRIMARY KEY (inspeccion_id, boleto_id)
+);
+
+upsertCortes:
+INSERT OR REPLACE INTO QrCorteEntity(inspeccion_id, boleto_id, inicio, fin)
+VALUES (?, ?, ?, ?);
+
+getCortes:
+SELECT * FROM QrCorteEntity WHERE inspeccion_id = ?;
+
+deleteCortes:
+DELETE FROM QrCorteEntity WHERE inspeccion_id = ?;

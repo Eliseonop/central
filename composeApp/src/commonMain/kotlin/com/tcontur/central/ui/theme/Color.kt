@@ -26,8 +26,27 @@ val TconturBlueDark  = Color(0xFF003C8F)   // deep navy — splash gradient top,
 val TconturBlueLight = Color(0xFF5E92F3)   // light blue — light scheme primaryContainer
 val TconturAccent    = Color(0xFFFFAB00)   // amber — MaterialTheme secondary
 
+val TconturAccentDark    = Color(0xFFFF9800)   // amber — dark scheme secondary
+
+// ─── Shared button palette (dark pastels — referencia: dashboard) ─────────────
+/** Azul pastel oscuro — Scan / QR (fondo) */
+val BtnBlueBg      = Color(0xFFB3D4F0)
+/** Azul pastel oscuro — Scan / QR (texto e ícono) */
+val BtnBlueFg      = Color(0xFF0D4C8A)
+/** Verde pastel oscuro — Mapa / Finalizar (fondo) */
+val BtnGreenBg     = Color(0xFF9DD4B0)
+/** Verde pastel oscuro — Mapa / Finalizar (texto e ícono) */
+val BtnGreenFg     = Color(0xFF145C32)
+/** Gris neutro — botón inactivo (fondo) */
+val BtnDisabledBg  = Color(0xFFDDE3EA)
+/** Gris neutro — botón inactivo (texto e ícono) */
+val BtnDisabledFg  = Color(0xFF7A8A99)
+
 // ─── Neutral ──────────────────────────────────────────────────────────────────
-val Surface   = Color(0xFFE8EAED)   // gris humo claro
-val OnSurface = Color(0xFF1A1A2E)   // texto oscuro (bien como está)
-val Error     = Color(0xFFB00020)
-val OnError   = Color(0xFFF2F2F2)   // blanco suavizado
+val Surface        = Color(0xFFEEF2F7)   // fondo gris-azulado suave (app background)
+val SurfaceCard    = Color(0xFFFFFFFF)   // blanco para sheets / drawers
+val OnSurface      = Color(0xFF1A2332)   // texto principal oscuro
+val OnSurfaceSub   = Color(0xFF5A6A80)   // texto secundario / placeholder
+val Outline        = Color(0xFFCBD5E1)   // borde sutil
+val Error          = Color(0xFFB00020)
+val OnError        = Color(0xFFF2F2F2)

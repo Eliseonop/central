@@ -178,6 +178,15 @@ class LocationForegroundService : Service() {
                     return
                 }
 
+                // Block sends until login is confirmed for this socket session.
+                // isAuthenticated resets to false on disconnect, so reconnects
+                // without login are automatically blocked until SocketDispatcherViewModel
+                // completes the login handshake.
+                if (!protoSocketManager.isAuthenticated.value) {
+                    Log.d(TAG, "📍 Sin login en sesión actual — omitiendo envío de posición")
+                    return
+                }
+
                 val now = System.currentTimeMillis()
                 if (now - lastSocketSendTime < SEND_INTERVAL_MS) return
                 lastSocketSendTime = now

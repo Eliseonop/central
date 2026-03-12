@@ -3,13 +3,12 @@ package com.tcontur.central.inspectoria.initializer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tcontur.central.core.network.ApiResult
-import com.tcontur.central.core.socket.ProtoSocketManager
-import com.tcontur.central.core.socket.SocketEvent
 import com.tcontur.central.core.socket.SocketServiceManager
+import com.tcontur.central.core.socket.SocketSessionRepository
 import com.tcontur.central.core.storage.AppStorage
 import com.tcontur.central.core.storage.StorageKeys
-import com.tcontur.central.data.AuthRepositoryImpl
 import com.tcontur.central.data.EmpresaApiService
+import com.tcontur.central.data.repository.RoutesDataRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,10 +28,10 @@ sealed class InspectoriaInitializerEvent {
 
 class InspectoriaInitializerViewModel(
     private val storage: AppStorage,
-    private val authRepository: AuthRepositoryImpl,
-    private val protoSocketManager: ProtoSocketManager,
     private val socketServiceManager: SocketServiceManager,
-    private val empresaApiService: EmpresaApiService
+    private val empresaApiService: EmpresaApiService,
+    private val socketSessionRepository: SocketSessionRepository,
+    private val routesDataRepository: RoutesDataRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(InspectoriaInitializerState())
@@ -44,8 +43,9 @@ class InspectoriaInitializerViewModel(
     init {
         println("$TAG ViewModel creado — iniciando conexión")
         fetchEmpresaAndConnect()
-        observeSocketConnection()
-        observeLoginConfirmation()
+        // Login is sent by SocketDispatcherViewModel (app-scoped) on every
+        // (re)connect — including reconnects after this ViewModel is destroyed.
+        observeSessionAuthentication()
     }
 
     // ── Step 1: get empresa → extract compute IP → connect socket ─────────────
@@ -76,7 +76,7 @@ class InspectoriaInitializerViewModel(
 
             if (wsUrl.isNotBlank()) {
                 println("$TAG 🚀 Iniciando tracking y conexión WS → $wsUrl")
-                socketServiceManager.startLocationTracking()   // Inspectoria-only
+                socketServiceManager.startLocationTracking()
                 socketServiceManager.connect(wsUrl)
             } else {
                 println("$TAG ❌ No se pudo determinar la URL del WS — sin conexión")
@@ -91,50 +91,29 @@ class InspectoriaInitializerViewModel(
         return url
     }
 
-    // ── Step 2: socket connected → send login immediately ────────────────────
+    // ── Step 2: wait for SocketDispatcherViewModel to confirm "login" ─────────
+    //
+    // SocketDispatcherViewModel (app-scoped) sends login on every (re)connect
+    // and processes the server's "login" response → SocketSessionRepository.
+    // We just observe the resulting authenticated state.
 
-    private fun observeSocketConnection() {
+    private fun observeSessionAuthentication() {
         viewModelScope.launch {
-            protoSocketManager.isConnected.collect { connected ->
-                if (connected) {
-                    println("$TAG ✅ Socket conectado — enviando frame de login")
-                    _state.update { it.copy(statusMessage = "Logueando...") }
-                    sendSocketLogin()
-                } else {
-                    println("$TAG 🔴 Socket desconectado")
-                }
+            socketSessionRepository.isAuthenticated.collect { isAuth ->
+                if (!isAuth) return@collect
+
+                println("$TAG 🟢 Autenticación confirmada")
+                _state.update { it.copy(isConnected = true, statusMessage = "¡Conexión exitosa!") }
+
+                val empresaCodigo = storage.getString(StorageKeys.EMPRESA_CODE)
+                val token = "r9a2vhtsjxjm_z6i3f5u0jicpyx2w0id24pguu"
+                routesDataRepository.load(empresaCodigo, token)
+
+                delay(600)
+                println("$TAG 🏠 Navegando a InspectoriaRoot")
+                _events.value = InspectoriaInitializerEvent.NavigateToHome
             }
         }
-    }
-
-    // ── Step 3: wait for server's login confirmation ──────────────────────────
-
-    private fun observeLoginConfirmation() {
-        viewModelScope.launch {
-            protoSocketManager.socketEvents.collect { event ->
-                if (event is SocketEvent.MessageDecoded && event.header == "login") {
-                    println("$TAG 🟢 Login confirmado por el servidor — data: ${event.data}")
-                    protoSocketManager.setAuthenticated(true)
-                    _state.update { it.copy(isConnected = true, statusMessage = "¡Conexión exitosa!") }
-                    delay(600)
-                    println("$TAG 🏠 Navegando a InspectoriaRoot")
-                    _events.value = InspectoriaInitializerEvent.NavigateToHome
-                }
-            }
-        }
-    }
-
-    private suspend fun sendSocketLogin() {
-        val user = authRepository.getStoredUser()
-        if (user == null) {
-            println("$TAG ❌ sendSocketLogin() — no hay usuario almacenado")
-            return
-        }
-        println("$TAG 📤 Enviando login — id=${user.id} codigo=${user.codigo}")
-        socketServiceManager.send(
-            data      = hashMapOf("id" to user.id, "code" to user.codigo),
-            formatKey = "login"
-        )
     }
 
     fun consumeEvent() {

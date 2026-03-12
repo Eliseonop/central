@@ -77,7 +77,7 @@ class LoginViewModel(
     private fun saveCredentials(empresa: Empresa, username: String, password: String) {
         storage.putBoolean(StorageKeys.REMEMBER_ME, true)
         storage.putString(StorageKeys.SAVED_USERNAME, username)
-//        storage.putString(StorageKeys.SAVED_PASSWORD, password)
+        storage.putString(StorageKeys.SAVED_PASSWORD, password)
         storage.putString(StorageKeys.SAVED_EMPRESA_ID, empresa.id.toString())
     }
 

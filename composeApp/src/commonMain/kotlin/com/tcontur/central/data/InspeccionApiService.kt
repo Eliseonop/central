@@ -35,6 +35,26 @@ class InspeccionApiService(private val client: HttpClient) {
         }.body<List<InspeccionDto>>()
     }.toApiResult("Error al obtener inspecciones")
 
+
+    suspend fun getRoutesData(
+        empresaCodigo: String,
+        token: String
+    ): ApiResult<RoutesDataDto> = runCatching {
+        client.get("${base(empresaCodigo)}/tasks/routes-data") {
+            auth(token)
+        }.body<RoutesDataDto>()
+    }.toApiResult("Error al obtener routes data")
+
+    suspend fun getInspeccionById(
+        empresaCodigo: String,
+        token: String,
+        id: Int
+    ): ApiResult<InspeccionDto> = runCatching {
+        client.get("${base(empresaCodigo)}/api/inspecciones/$id") {
+            auth(token)
+        }.body<InspeccionDto>()
+    }.toApiResult("Error al obtener inspección $id")
+
     // ── Ver inspección activa ─────────────────────────────────────────────────
     suspend fun verInspeccion(
         empresaCodigo: String,
@@ -101,6 +121,11 @@ class InspeccionApiService(private val client: HttpClient) {
         bajadaPos: PosDto?,
         ocurrencias: List<OcurrenciaFinDto>
     ): ApiResult<InspeccionDto> = runCatching {
+        val body = FinalizarBody(
+            id, cortes, reintegros, reintegrosMonto,
+            pasajerosVivos, pasajerosMonto, bajadaId, bajadaPos, ocurrencias
+        )
+        println("FINALIZAR_INSPECCION BODY: ${kotlinx.serialization.json.Json.encodeToString(body)}")
         client.put("${base(empresaCodigo)}/api/inspecciones/$id/finalizar") {
             auth(token)
             contentType(ContentType.Application.Json)

@@ -2,6 +2,7 @@ package com.tcontur.central.inspectoria.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tcontur.central.core.network.ApiResult
 import com.tcontur.central.core.socket.ProtoSocketManager
 import com.tcontur.central.core.socket.SocketServiceManager
 import com.tcontur.central.core.storage.AppStorage
@@ -62,6 +63,15 @@ class InspectoriaDashboardViewModel(
         }
     }
 
+    fun sendRquestQr() {
+        socketServiceManager.send(
+            data = hashMapOf(
+                "vehicle" to 61,
+            ),
+            formatKey = "request_qr"
+        )
+    }
+
     fun refresh() {
         val user = _state.value.user ?: return
         viewModelScope.launch { loadDashboard(user) }
@@ -72,31 +82,27 @@ class InspectoriaDashboardViewModel(
         val token = storage.getString(StorageKeys.AUTH_TOKEN)
         val code  = storage.getString(StorageKeys.EMPRESA_CODE)
 
-        val hoy = currentDateStr()
-
-        // 1. Ver inspección activa
         inspeccionApi.verInspeccion(code, token).let { result ->
-            if (result is com.tcontur.central.core.network.ApiResult.Success) {
-                val pending = result.data?.toDomain()
-                _state.update { it.copy(inspPendiente = pending) }
+            if (result is ApiResult.Success && result.data != null) {
+                inspeccionApi.getInspeccionById(code, token, result.data.id).let { full ->
+                    if (full is ApiResult.Success) {
+                        _state.update { it.copy(inspPendiente = full.data.toDomain()) }
+                    }
+                }
             }
         }
 
-        // 2. Listar inspecciones del día
-        inspeccionApi.getInspecciones(code, token, user.id, hoy).let { result ->
-            if (result is com.tcontur.central.core.network.ApiResult.Success) {
+        inspeccionApi.getInspecciones(code, token, user.id, currentDateStr()).let { result ->
+            if (result is ApiResult.Success) {
                 val list = result.data.map { it.toDomain() }
-                val totalRei = list.sumOf { it.reintegrosMonto }
-                val totalPas = list.sumOf { it.pasajerosMonto }
-                val ultima = list.filter { it.bajada != null }
-                    .maxByOrNull { it.fin ?: "" }
-                    ?.let { "${it.bajada} – ${formatTime(it.fin)}" }
                 _state.update {
                     it.copy(
-                        inspeccionesHoy     = list,
-                        totalReintegrosMonto = totalRei,
-                        totalPasajerosMonto  = totalPas,
-                        ultimaBajada         = ultima,
+                        inspeccionesHoy      = list,
+                        totalReintegrosMonto = list.sumOf { it.reintegrosMonto },
+                        totalPasajerosMonto  = list.sumOf { it.pasajerosMonto },
+                        ultimaBajada         = list.filter { it.bajada != null }
+                            .maxByOrNull { it.fin ?: "" }
+                            ?.let { "${it.bajada} – ${formatTime(it.fin)}" },
                         isLoading            = false
                     )
                 }
@@ -105,7 +111,6 @@ class InspectoriaDashboardViewModel(
             }
         }
     }
-
     fun onInspeccionarClick() {
         val pending = _state.value.inspPendiente
         if (pending != null) {

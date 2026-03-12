@@ -10,6 +10,7 @@
  * kotlin {} KMP extension, making iosArm64() / sourceSets / androidMain etc.
  * all unresolvable when iOS targets are also declared — so we stay here.
  */
+import org.gradle.kotlin.dsl.implementation
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 plugins {
@@ -64,11 +65,24 @@ kotlin {
             implementation("androidx.camera:camera-lifecycle:1.4.1")
             implementation("androidx.camera:camera-view:1.4.1")
             implementation("com.google.mlkit:barcode-scanning:17.3.0")
+            // ── OSMDroid — Online map tiles ───────────────────────────────────
+            implementation(libs.mapsforge)
+        //            {
+//                exclude(group = "org.slf4j")
+//                exclude(group = "org.yaml", module = "snakeyaml")
+//            }
+            implementation(libs.osmdroid)
+        //            {
+//                exclude(group = "org.slf4j")
+//                exclude(group = "org.yaml", module = "snakeyaml")
+//            }
+            implementation(libs.sqldelight.android.driver)
         }
 
         iosMain.dependencies {
             // Ktor Darwin (iOS/macOS) engine
             implementation(libs.ktor.client.darwin)
+            implementation(libs.sqldelight.native.driver)
         }
 
         commonMain.dependencies {
@@ -104,6 +118,9 @@ kotlin {
             implementation(libs.multiplatform.settings.noarg)
             // DateTime
             implementation(libs.kotlinx.datetime)
+            //SqlDelight Runtime
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.sqldelight.coroutines)
         }
 
         commonTest.dependencies {

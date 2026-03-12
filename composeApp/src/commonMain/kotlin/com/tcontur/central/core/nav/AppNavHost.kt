@@ -16,6 +16,7 @@ import androidx.navigation.toRoute
 import com.tcontur.central.core.network.SessionEventBus
 import com.tcontur.central.core.permission.StartupPermissionsScreen
 import com.tcontur.central.core.session.SessionManager
+import com.tcontur.central.core.socket.SocketDispatcherViewModel
 import com.tcontur.central.domain.auth.UserRole
 import com.tcontur.central.inspectoria.initializer.InspectoriaInitializerScreen
 import com.tcontur.central.inspectoria.inspectoriaNavGraph
@@ -23,6 +24,7 @@ import com.tcontur.central.login.LoginScreen
 import com.tcontur.central.splash.SplashScreen
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun AppNavHost(
@@ -32,6 +34,13 @@ fun AppNavHost(
 ) {
     val sessionManager: SessionManager = koinInject()
     val scope = rememberCoroutineScope()
+
+    // Activate the central socket message dispatcher at app scope.
+    // Being called here (outside any NavBackStackEntry) it is scoped to the
+    // Activity ViewModelStore — it lives for the full user session and is
+    // never garbage-collected mid-navigation.
+    @Suppress("UNUSED_VARIABLE")
+    val socketDispatcher: SocketDispatcherViewModel = koinViewModel()
 
     LaunchedEffect(Unit) {
         SessionEventBus.unauthorized.collect {

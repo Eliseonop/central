@@ -68,9 +68,10 @@ class InspeccionViewModel(
             val inspResult = inspeccionApi.verInspeccion(code, token)
             if (inspResult is ApiResult.Success && inspResult.data != null) {
                 val dto  = inspResult.data
+                println(dto)
                 val insp = dto.toDomain()
 
-                val cortes: List<CorteItem> = if (qrCortes != null) {
+                val cortes: List<CorteItem> = if ( qrCortes != null && false) {
                     qrCortes.map { qrc ->
                         CorteItem(
                             boletoId       = qrc.boletoId,
@@ -263,31 +264,9 @@ class InspeccionViewModel(
             val token = storage.getString(StorageKeys.AUTH_TOKEN)
             val code  = storage.getString(StorageKeys.EMPRESA_CODE)
 
-            // 1. Get current GPS for bajada position
             val loc = locationManager.getCurrentLocation()
             val bajadaPos = if (loc != null) PosDto(loc.latitude, loc.longitude) else null
 
-            // 2. Validate proximity → derive bajadaId (paradero stop ID).
-            //    Mirrors Angular: non-blocking — inspection finalizes regardless of validation result.
-            //    If inspector is far, bajadaId stays null and no stop is recorded.
-            var bajadaId: Int? = null
-            if (loc != null) {
-                val cercaniaResult = inspeccionApi.validarCercania(
-                    code, token, insp.unidadId, loc.latitude, loc.longitude
-                )
-                if (cercaniaResult is ApiResult.Success) {
-                    val cercania = cercaniaResult.data
-                    bajadaId = cercania.paradero.takeIf { it > 0 }
-                    val msg = if (cercania.validation)
-                        "Cercanía confirmada con la unidad"
-                    else
-                        "Lejos de la unidad, se cerrará sin paradero de bajada"
-                    _state.update { it.copy(cercaniaMessage = msg) }
-                }
-                // If cercanía call fails, proceed without bajadaId (same as Angular failure handling)
-            }
-
-            // 3. Build payload and finalize
             val cortesDto = s.cortes.map { c ->
                 InspeccionApiService.CorteFinDto(
                     boleto          = c.boletoId,
@@ -310,7 +289,7 @@ class InspeccionViewModel(
                 cortesDto,
                 s.totalReintegros, s.totalReintegrosMonto,
                 s.totalPasajeros, s.totalPasajerosMonto,
-                bajadaId, bajadaPos,
+                null, bajadaPos,
                 ocurrenciasDto
             )) {
                 is ApiResult.Success -> _events.value = InspeccionEvent.Finalized

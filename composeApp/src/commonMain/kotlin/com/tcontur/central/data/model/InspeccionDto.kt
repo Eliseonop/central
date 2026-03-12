@@ -94,16 +94,16 @@ data class SuministroDto(
     @SerialName("serie")  val serie: String = ""         // batch series (on suministro, not boleto)
 )
 
-@Serializable
-data class BoletoDto(
-    @SerialName("id")     val id: Int,
-    @SerialName("nombre") val nombre: String,
-    // `serie` lives on the parent SuministroDto when coming from /api/suministros,
-    // so it may be absent inside the boleto object → default to empty string.
-    @SerialName("serie")  val serie: String = "",
-    @SerialName("tarifa") val tarifa: Double,
-    @SerialName("color")  val color: String = "blue"
-)
+//@Serializable
+//data class BoletoDto(
+//    @SerialName("id")     val id: Int,
+//    @SerialName("nombre") val nombre: String,
+//    // `serie` lives on the parent SuministroDto when coming from /api/suministros,
+//    // so it may be absent inside the boleto object → default to empty string.
+//    @SerialName("serie")  val serie: String = "",
+//    @SerialName("tarifa") val tarifa: Double,
+//    @SerialName("color")  val color: String = "blue"
+//)
 
 @Serializable
 data class UnidadSelectDto(
